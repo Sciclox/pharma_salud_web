@@ -1,0 +1,174 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Sucursal {
+  id            Int      @id @default(autoincrement())
+  nombre        String   @unique
+  direccion     String?
+  estado        String   @default("activo")
+  fechaCreacion DateTime @default(now()) @map("fecha_creacion")
+
+  usuarios          Usuario[]
+  inventarios       InventarioSucursal[]
+  ventas            RegistroVentas[]
+  carritoItems      CarritoVentas[]
+  kardex            Kardex[]
+  fechasVencimiento ExpiracionLote[]
+  sobrantesCaja     SobranteCaja[]
+
+  @@map("sucursal")
+}
+
+model Usuario {
+  id              Int      @id @default(autoincrement()) @map("id_usuario")
+  nombreUsuario   String   @unique @map("nombre_usuario")
+  nombreVendedor  String   @map("nombre_vendedor")
+  clave           String
+  rol             String   @default("Vendedor") // "Administrador" | "Vendedor"
+  sucursalId      Int?     @map("sucursal_id")   // null = Admin global (ve todas las sucursales)
+  genero          String?
+  estado          String   @default("activo")
+
+  sucursal        Sucursal?       @relation(fields: [sucursalId], references: [id])
+  ventas          RegistroVentas[]
+  detallesVenta   DetalleVenta[]
+  carritoItems    CarritoVentas[]
+  sobrantesCaja   SobranteCaja[]
+
+  @@map("usuario")
+}
+
+model Producto {
+  id                          Int      @id @default(autoincrement())
+  nombreProducto              String   @map("nombre_producto")
+  tipoProducto                String?  @map("tipo_producto") // Categoría
+  cantidadPresentacion        Int?     @map("cantidad_presentacion") // Unidades por caja
+  cantidadPresentacionBlister Int?     @map("cantidad_presentacion_blister") // Unidades por blíster
+  fechaCreacion               DateTime @default(now()) @map("fecha_creacion")
+
+  inventarios                 InventarioSucursal[]
+  detallesVenta               DetalleVenta[]
+  carritoItems                CarritoVentas[]
+  kardex                      Kardex[]
+  fechasVencimiento           ExpiracionLote[]
+
+  @@map("producto")
+}
+
+model InventarioSucursal {
+  id           Int   @id @default(autoincrement())
+  productoId   Int   @map("producto_id")
+  sucursalId   Int   @map("sucursal_id")
+  cantidadTotal Int   @default(0) @map("cantidad_total") // Stock actual por sucursal
+  precioCaja   Float @default(0) @map("precio_caja")
+  precioUnidad Float @default(0) @map("precio_unidad")
+  costoCaja    Float @default(0) @map("costo_caja")
+  costoUnidad  Float @default(0) @map("costo_unidad")
+  stockMinimo  Int   @default(0) @map("stock_minimo")
+
+  producto     Producto @relation(fields: [productoId], references: [id], onDelete: Cascade)
+  sucursal     Sucursal @relation(fields: [sucursalId], references: [id], onDelete: Cascade)
+
+  @@unique([productoId, sucursalId])
+  @@map("inventario_sucursal")
+}
+
+model RegistroVentas {
+  id        Int      @id @default(autoincrement())
+  sucursalId Int     @map("sucursal_id")
+  usuarioId Int      @map("usuario_id")
+  fecha     DateTime @default(now())
+  total     Float    @default(0)
+  pagoCon   Float    @default(0) @map("pago_con")
+  vuelto    Float    @default(0)
+
+  sucursal  Sucursal       @relation(fields: [sucursalId], references: [id])
+  usuario   Usuario        @relation(fields: [usuarioId], references: [id])
+  detalles  DetalleVenta[]
+
+  @@map("registro_de_ventas")
+}
+
+model DetalleVenta {
+  id              Int      @id @default(autoincrement())
+  registroVentaId Int      @map("registro_venta_id")
+  productoId      Int      @map("producto_id")
+  nombreProducto  String   @map("nombre_producto")
+  usuarioId       Int      @map("usuario_id")
+  fecha     DateTime @default(now())
+  tipoVenta       String   @map("tipo_venta") // "Venta por unidad" | "Venta por caja" | "Venta por blister"
+  cantidad        Int
+  precioVenta     Float    @map("precio_venta")
+  devolucion      String   @default("No") // "Si" | "No"
+
+  registroVenta   RegistroVentas @relation(fields: [registroVentaId], references: [id], onDelete: Cascade)
+  producto        Producto       @relation(fields: [productoId], references: [id])
+  usuario         Usuario        @relation(fields: [usuarioId], references: [id])
+
+  @@map("detalles_venta")
+}
+
+model CarritoVentas {
+  id         Int      @id @default(autoincrement())
+  productoId Int      @map("producto_id")
+  sucursalId Int      @map("sucursal_id")
+  idUsuario  Int      @map("id_usuario")
+  cantidad   Int
+  precioVenta Float    @map("precio_venta")
+  tipoVenta  String   @map("tipo_venta")
+  fecha      DateTime @default(now())
+
+  producto   Producto @relation(fields: [productoId], references: [id])
+  sucursal   Sucursal @relation(fields: [sucursalId], references: [id])
+  usuario    Usuario  @relation(fields: [idUsuario], references: [id])
+
+  @@map("carrito_de_ventas")
+}
+
+model Kardex {
+  id              Int      @id @default(autoincrement())
+  sucursalId      Int      @map("sucursal_id")
+  productoId      Int      @map("producto_id")
+  nombreProducto  String   @map("nombre_producto")
+  fechaMovimiento DateTime @default(now()) @map("fecha_movimiento")
+  tipoMovimiento  String   @map("tipo_movimiento") // "Ingreso" | "Registro" | "Ajuste (+)" | "Ajuste (-)" | "Venta..."
+  cantidad        Int
+  idDetalleVenta  Int?     @map("id_detalle_venta")
+
+  sucursal        Sucursal @relation(fields: [sucursalId], references: [id])
+  producto        Producto @relation(fields: [productoId], references: [id])
+
+  @@map("kardex")
+}
+
+model ExpiracionLote {
+  id               Int      @id @default(autoincrement())
+  sucursalId       Int      @map("sucursal_id")
+  productoId       Int      @map("producto_id")
+  fechaVencimiento DateTime @map("fecha_vencimiento")
+  cantidad         Int      @default(0)
+
+  sucursal         Sucursal @relation(fields: [sucursalId], references: [id])
+  producto         Producto @relation(fields: [productoId], references: [id])
+
+  @@map("fecha_vencimiento")
+}
+
+model SobranteCaja {
+  id        Int      @id @default(autoincrement())
+  sucursalId Int     @map("sucursal_id")
+  usuarioId Int      @map("usuario_id")
+  fecha     DateTime @default(now())
+  monto     Float
+  nota      String?
+
+  sucursal  Sucursal @relation(fields: [sucursalId], references: [id])
+  usuario   Usuario  @relation(fields: [usuarioId], references: [id])
+
+  @@map("sobrante_caja")
+}
