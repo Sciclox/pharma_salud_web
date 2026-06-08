@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { 
   LayoutDashboard, 
   Package, 
@@ -10,7 +10,10 @@ import {
   AlertTriangle, 
   BookOpen, 
   Scale, 
-  Coins 
+  Coins,
+  Store,
+  Tags,
+  Building
 } from "lucide-react";
 
 interface BadgeConfig {
@@ -32,6 +35,8 @@ interface MenuSection {
 
 export default function SidebarNav() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const sucursalId = searchParams.get("sucursalId");
 
   // Menu agrupado con badges dinámicos integrados
   const menuSections: MenuSection[] = [
@@ -42,11 +47,13 @@ export default function SidebarNav() {
         { 
           label: "Catálogo Fármacos", 
           href: "/admin/productos", 
-          icon: <Package size={18} />,
-          badge: { type: "info", text: "OK" }
+          icon: <Package size={18} />
         },
+        { label: "Categorías", href: "/admin/categorias", icon: <Tags size={18} /> },
+        { label: "Laboratorios", href: "/admin/laboratorios", icon: <Building size={18} /> },
         { label: "Libro Dispensación", href: "/admin/ventas", icon: <Receipt size={18} /> },
         { label: "Control de Personal", href: "/admin/usuarios", icon: <Users size={18} /> },
+        { label: "Gestión de Sucursales", href: "/admin/sucursales", icon: <Store size={18} /> },
       ]
     },
     {
@@ -78,11 +85,12 @@ export default function SidebarNav() {
           <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
             {section.items.map((item) => {
               const isActive = pathname === item.href || (item.href !== "/admin" && pathname.startsWith(item.href));
+              const hrefWithParams = sucursalId ? `${item.href}?sucursalId=${sucursalId}` : item.href;
               
               return (
                 <Link
                   key={item.href}
-                  href={item.href}
+                  href={hrefWithParams}
                   className={`nav-item ${isActive ? "nav-item-active" : ""}`}
                 >
                   <span className="nav-icon-wrapper">{item.icon}</span>
@@ -99,26 +107,7 @@ export default function SidebarNav() {
         </div>
       ))}
 
-      {/* Bitácora de Enlace de Terminal en el Footer del Nav */}
-      <div 
-        style={{ 
-          marginTop: "auto", 
-          padding: "14px 16px", 
-          background: "#ffffff", 
-          border: "1px solid rgba(0, 0, 0, 0.04)", 
-          borderRadius: "12px",
-          display: "flex",
-          alignItems: "center",
-          gap: "10px",
-          boxShadow: "0 2px 8px rgba(0, 0, 0, 0.015)"
-        }}
-      >
-        <div className="telemetry-node" />
-        <div style={{ display: "flex", flexDirection: "column" }}>
-          <span style={{ display: "block", fontSize: "0.6rem", color: "rgba(15, 23, 42, 0.4)", fontWeight: 800, letterSpacing: "0.06em" }}>TERMINAL DE ACCESO</span>
-          <span style={{ display: "block", fontSize: "0.68rem", color: "#10b981", fontWeight: 700 }}>Canal Seguro SSL</span>
-        </div>
-      </div>
+
 
       {/* Estilos CSS locales de alta fidelidad para el Tema Claro */}
       <style>{`
@@ -149,7 +138,7 @@ export default function SidebarNav() {
           background: transparent;
           border: 1px solid transparent;
         }
-        .nav-item:hover {
+        .nav-item:not(.nav-item-active):hover {
           color: #0f172a !important;
           background: rgba(0, 0, 0, 0.015) !important;
           transform: translateY(-1px);
@@ -193,24 +182,13 @@ export default function SidebarNav() {
           color: #10b981;
           border: 1px solid rgba(16, 185, 129, 0.15);
         }
-        .telemetry-node {
-          width: 8px;
-          height: 8px;
-          border-radius: 50%;
-          background: #10b981;
-          box-shadow: 0 0 8px #10b981;
-          animation: pulseNode 2s infinite ease-in-out;
-        }
+
         @keyframes pulseBadge {
           0% { transform: scale(1); opacity: 0.8; }
           50% { transform: scale(1.05); opacity: 1; }
           100% { transform: scale(1); opacity: 0.8; }
         }
-        @keyframes pulseNode {
-          0% { opacity: 0.5; }
-          50% { opacity: 1; }
-          100% { opacity: 0.5; }
-        }
+
       `}</style>
     </nav>
   );

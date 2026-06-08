@@ -8,6 +8,7 @@ export default function SucursalSelector() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [sucursales, setSucursales] = useState<any[]>([]);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
   
   const currentSucursal = searchParams.get("sucursalId") || "todos";
 
@@ -17,9 +18,30 @@ export default function SucursalSelector() {
       .then((data) => {
         if (Array.isArray(data)) {
           setSucursales(data);
+          
+          // Auto-sanitizar la URL si contiene un sucursalId obsoleto o inexistente
+          const currentId = searchParams.get("sucursalId");
+          if (currentId && currentId !== "todos") {
+            const idNum = parseInt(currentId);
+            if (!isNaN(idNum) && !data.some((s: any) => s.id === idNum)) {
+              const params = new URLSearchParams(searchParams.toString());
+              params.delete("sucursalId");
+              router.replace(`${pathname}?${params.toString()}`);
+            }
+          }
         }
       })
       .catch((err) => console.error("Error al cargar sucursales:", err));
+  }, [pathname, refreshTrigger, router, searchParams]);
+
+  useEffect(() => {
+    const handleUpdate = () => {
+      setRefreshTrigger((prev) => prev + 1);
+    };
+    window.addEventListener("sucursales-updated", handleUpdate);
+    return () => {
+      window.removeEventListener("sucursales-updated", handleUpdate);
+    };
   }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -57,10 +79,10 @@ export default function SucursalSelector() {
           value={currentSucursal}
           onChange={handleChange}
         >
-          <option value="todos">🌍 Todas las Sucursales (Consolidado)</option>
+          <option value="todos">Todas las Sucursales (Consolidado)</option>
           {sucursales.map((suc) => (
             <option key={suc.id} value={suc.id.toString()}>
-              🏪 {suc.nombre.replace("Botica Pharma Salud - ", "")}
+              {suc.nombre.replace("Botica Pharma Salud - ", "")}
             </option>
           ))}
         </select>

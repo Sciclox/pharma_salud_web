@@ -220,7 +220,7 @@ export default function AdminVentas() {
               onChange={(e) => setSucursalFiltro(e.target.value)}
               style={{ width: "200px", height: "42px", padding: "8px 12px" }}
             >
-              <option value="todos">🌍 Todas (Consolidado)</option>
+              <option value="todos">Todas (Consolidado)</option>
               {sucursales.map(s => (
                 <option key={s.id} value={s.id.toString()}>{s.nombre}</option>
               ))}

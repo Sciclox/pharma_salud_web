@@ -48,7 +48,7 @@ export async function GET(request: Request) {
         producto: {
           select: {
             nombreProducto: true,
-            tipoProducto: true,
+            categoriaId: true,
             cantidadPresentacion: true,
             cantidadPresentacionBlister: true,
           },
@@ -71,7 +71,7 @@ export async function GET(request: Request) {
   }
 }
 
-// PUT /api/inventarios - Actualizar stock, precios y costos de un producto en una sucursal (Solo Admin)
+// PUT /api/inventarios - Actualizar stock, precios y costos de un producto en una/todas las sucursales (Solo Admin)
 export async function PUT(request: Request) {
   try {
     const session = await auth();
@@ -98,14 +98,52 @@ export async function PUT(request: Request) {
       );
     }
 
-    // Realizar un upsert (crear o actualizar) de la fila de inventario
+    const pId = parseInt(productoId);
+
+    // ── MODO GLOBAL: aplicar cambios a TODAS las sucursales ──────────────────
+    if (sucursalId === "todos") {
+      // Obtener todas las sucursales existentes
+      const todasSucursales = await prisma.sucursal.findMany({ select: { id: true } });
+
+      const updateData = {
+        precioCaja: precioCaja !== undefined ? parseFloat(precioCaja) : undefined,
+        precioUnidad: precioUnidad !== undefined ? parseFloat(precioUnidad) : undefined,
+        costoCaja: costoCaja !== undefined ? parseFloat(costoCaja) : undefined,
+        costoUnidad: costoUnidad !== undefined ? parseFloat(costoUnidad) : undefined,
+        stockMinimo: stockMinimo !== undefined ? parseInt(stockMinimo) : undefined,
+        // cantidadTotal se omite intencionalmente en modo global para no sobreescribir stock individual
+      };
+
+      // Ejecutar upsert para cada sucursal en una transacción
+      const ops = todasSucursales.map((s) =>
+        prisma.inventarioSucursal.upsert({
+          where: { productoId_sucursalId: { productoId: pId, sucursalId: s.id } },
+          update: updateData,
+          create: {
+            productoId: pId,
+            sucursalId: s.id,
+            cantidadTotal: 0,
+            precioCaja: precioCaja !== undefined ? parseFloat(precioCaja) : 0,
+            precioUnidad: precioUnidad !== undefined ? parseFloat(precioUnidad) : 0,
+            costoCaja: costoCaja !== undefined ? parseFloat(costoCaja) : 0,
+            costoUnidad: costoUnidad !== undefined ? parseFloat(costoUnidad) : 0,
+            stockMinimo: stockMinimo !== undefined ? parseInt(stockMinimo) : 0,
+          },
+        })
+      );
+
+      await prisma.$transaction(ops);
+      return NextResponse.json({ ok: true, sucursalesActualizadas: todasSucursales.length });
+    }
+
+    // ── MODO LOCAL: aplicar cambios solo a la sucursal seleccionada ──────────
+    const sId = parseInt(sucursalId);
+    if (isNaN(sId)) {
+      return NextResponse.json({ error: "sucursalId inválido" }, { status: 400 });
+    }
+
     const inventarioActualizado = await prisma.inventarioSucursal.upsert({
-      where: {
-        productoId_sucursalId: {
-          productoId: parseInt(productoId),
-          sucursalId: parseInt(sucursalId),
-        },
-      },
+      where: { productoId_sucursalId: { productoId: pId, sucursalId: sId } },
       update: {
         cantidadTotal: cantidadTotal !== undefined ? parseInt(cantidadTotal) : undefined,
         precioCaja: precioCaja !== undefined ? parseFloat(precioCaja) : undefined,
@@ -115,8 +153,8 @@ export async function PUT(request: Request) {
         stockMinimo: stockMinimo !== undefined ? parseInt(stockMinimo) : undefined,
       },
       create: {
-        productoId: parseInt(productoId),
-        sucursalId: parseInt(sucursalId),
+        productoId: pId,
+        sucursalId: sId,
         cantidadTotal: cantidadTotal !== undefined ? parseInt(cantidadTotal) : 0,
         precioCaja: precioCaja !== undefined ? parseFloat(precioCaja) : 0,
         precioUnidad: precioUnidad !== undefined ? parseFloat(precioUnidad) : 0,

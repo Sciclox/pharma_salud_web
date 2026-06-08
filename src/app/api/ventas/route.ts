@@ -36,23 +36,31 @@ export async function GET(request: Request) {
       whereClause.usuarioId = parseInt(usuarioIdParam);
     }
 
-    // 3. Filtrar por rango de fechas (con soporte de zona horaria)
+    // 3. Filtrar por rango de fechas (con soporte de zona horaria UTC-5 Perú)
     if (fechaInicioStr && fechaFinStr) {
-      const inicio = new Date(fechaInicioStr);
-      const fin = new Date(fechaFinStr);
-      // Forzar que el fin de día sea hasta las 23:59:59
-      fin.setHours(23, 59, 59, 999);
+      // Las fechas llegan como strings YYYY-MM-DD en hora LOCAL (UTC-5)
+      // Para buscar correctamente en Postgres (UTC), debemos desplazar +5h
+      const OFFSET_MS = 5 * 60 * 60 * 1000; // UTC-5 → sumar 5h para pasar a UTC
+
+      const inicio = new Date(`${fechaInicioStr}T00:00:00.000Z`);
+      inicio.setTime(inicio.getTime() + OFFSET_MS); // inicio del día local en UTC
+
+      const fin = new Date(`${fechaFinStr}T23:59:59.999Z`);
+      fin.setTime(fin.getTime() + OFFSET_MS); // fin del día local en UTC
 
       whereClause.fecha = {
         gte: inicio,
         lte: fin,
       };
     } else if (fechaInicioStr) {
-      // Filtrar desde una fecha específica
+      const OFFSET_MS = 5 * 60 * 60 * 1000;
+      const inicio = new Date(`${fechaInicioStr}T00:00:00.000Z`);
+      inicio.setTime(inicio.getTime() + OFFSET_MS);
       whereClause.fecha = {
-        gte: new Date(fechaInicioStr),
+        gte: inicio,
       };
     }
+
 
     const ventas = await prisma.registroVentas.findMany({
       where: whereClause,
@@ -66,7 +74,7 @@ export async function GET(request: Request) {
         detalles: {
           include: {
             producto: {
-              select: { tipoProducto: true },
+              select: { categoriaId: true },
             },
           },
         },

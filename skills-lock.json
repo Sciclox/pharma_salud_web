@@ -884,10 +884,10 @@
       "computedHash": "f2491abcf3e99c2ebf9458338d1fe87a9b8e34b19a1e3022fc04d8224b6ce1ac"
     },
     "ui-ux-pro-max": {
-      "source": "nexu-io/open-design",
+      "source": "nextlevelbuilder/ui-ux-pro-max-skill",
       "sourceType": "github",
-      "skillPath": "skills/ui-ux-pro-max/SKILL.md",
-      "computedHash": "6cccf7e307597e036cf5d2b6efc085f8564369f02b88a193a375774ed4174b0e"
+      "skillPath": ".claude/skills/ui-ux-pro-max/SKILL.md",
+      "computedHash": "6337038fe1fe6bbe1b9f252ab678ee575859190bab6f0f246f4061824eb40875"
     },
     "venice-audio-music": {
       "source": "nexu-io/open-design",

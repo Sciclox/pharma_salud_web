@@ -26,6 +26,7 @@ export async function GET(
     const producto = await prisma.producto.findUnique({
       where: { id: productoId },
       include: {
+        laboratorio: true,
         inventarios: {
           include: {
             sucursal: {
@@ -78,6 +79,7 @@ export async function PUT(
     const {
       nombreProducto,
       tipoProducto,
+      laboratorioId,
       cantidadPresentacion,
       cantidadPresentacionBlister,
     } = body;
@@ -87,8 +89,12 @@ export async function PUT(
       data: {
         nombreProducto: nombreProducto ?? undefined,
         tipoProducto: tipoProducto ?? undefined,
-        cantidadPresentacion: cantidadPresentacion !== undefined ? parseInt(cantidadPresentacion) : undefined,
-        cantidadPresentacionBlister: cantidadPresentacionBlister !== undefined ? parseInt(cantidadPresentacionBlister) : undefined,
+        laboratorioId: laboratorioId !== undefined ? (laboratorioId ? parseInt(laboratorioId) : null) : undefined,
+        cantidadPresentacion: cantidadPresentacion !== undefined ? (cantidadPresentacion ? parseInt(cantidadPresentacion) : null) : undefined,
+        cantidadPresentacionBlister: cantidadPresentacionBlister !== undefined ? (cantidadPresentacionBlister ? parseInt(cantidadPresentacionBlister) : null) : undefined,
+      },
+      include: {
+        laboratorio: true,
       },
     });
 
@@ -123,11 +129,16 @@ export async function DELETE(
       );
     }
 
-    // Al eliminar el producto, gracias a 'onDelete: Cascade' en el esquema de Prisma,
-    // se eliminarán automáticamente todas sus relaciones en 'inventario_sucursal'.
-    await prisma.producto.delete({
-      where: { id: productoId },
-    });
+    // Eliminar registros dependientes en otras tablas para evitar errores de clave foránea (FK)
+    await prisma.$transaction([
+      prisma.carritoVentas.deleteMany({ where: { productoId } }),
+      prisma.expiracionLote.deleteMany({ where: { productoId } }),
+      prisma.kardex.deleteMany({ where: { productoId } }),
+      prisma.detalleVenta.deleteMany({ where: { productoId } }),
+      prisma.producto.delete({
+        where: { id: productoId },
+      }),
+    ]);
 
     return NextResponse.json({
       message: "Producto eliminado correctamente de forma física del catálogo global",

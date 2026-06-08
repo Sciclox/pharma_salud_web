@@ -52,6 +52,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             role: user.rol,
             sucursalId: user.sucursalId,
             sucursalName: user.sucursal?.nombre || null,
+            genero: user.genero,
           };
         } catch (error) {
           console.error("Error en authorize de NextAuth:", error);

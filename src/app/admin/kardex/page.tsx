@@ -129,14 +129,14 @@ function KardexContent() {
               onChange={(e) => setTipoFiltro(e.target.value)}
               style={{ cursor: "pointer" }}
             >
-              <option value="">⚙️ Todos los Tipos</option>
-              <option value="Ingreso">📥 Ingreso</option>
-              <option value="Registro">📝 Registro Inicial</option>
-              <option value="Ajuste (+)">📈 Ajuste (+)</option>
-              <option value="Ajuste (-)">📉 Ajuste (-)</option>
-              <option value="Venta por unidad">💊 Venta por Unidad</option>
-              <option value="Venta por caja">📦 Venta por Caja</option>
-              <option value="Venta por blister">💳 Venta por Blíster</option>
+              <option value="">Todos los Tipos</option>
+              <option value="Ingreso">Ingreso</option>
+              <option value="Registro">Registro Inicial</option>
+              <option value="Ajuste (+)">Ajuste (+)</option>
+              <option value="Ajuste (-)">Ajuste (-)</option>
+              <option value="Venta por unidad">Venta por Unidad</option>
+              <option value="Venta por caja">Venta por Caja</option>
+              <option value="Venta por blister">Venta por Blíster</option>
             </select>
           </div>
 

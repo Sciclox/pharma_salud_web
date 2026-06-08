@@ -21,7 +21,7 @@ export async function GET() {
         producto: {
           select: {
             nombreProducto: true,
-            tipoProducto: true,
+            categoriaId: true,
             cantidadPresentacion: true,
             cantidadPresentacionBlister: true,
           },

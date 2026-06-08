@@ -44,6 +44,7 @@ export const authConfig = {
         token.role = user.role;
         token.sucursalId = user.sucursalId;
         token.sucursalName = user.sucursalName;
+        token.genero = user.genero;
       }
       return token;
     },
@@ -53,6 +54,7 @@ export const authConfig = {
         session.user.role = token.role as string;
         session.user.sucursalId = token.sucursalId as number | null;
         session.user.sucursalName = token.sucursalName as string | null;
+        session.user.genero = token.genero as string | null;
       }
       return session;
     },

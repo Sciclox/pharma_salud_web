@@ -204,7 +204,7 @@ export default function AdminVencimientos() {
               onChange={(e) => setSucursalSeleccionada(e.target.value)}
               style={{ width: "220px", height: "42px", padding: "8px 12px" }}
             >
-              <option value="todos">🌍 Todas las sucursales</option>
+              <option value="todos">Todas las sucursales</option>
               {sucursales.map(s => (
                 <option key={s.id} value={s.id.toString()}>{s.nombre}</option>
               ))}

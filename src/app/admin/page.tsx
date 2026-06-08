@@ -11,13 +11,11 @@ import {
   ShoppingBag, 
   FileText,
   Calendar,
-  ShieldCheck,
-  Server,
-  Database,
   Thermometer,
-  RefreshCw,
   CheckCircle,
-  Building2
+  Building2,
+  X,
+  Bell
 } from "lucide-react";
 import { formatMoney } from "@/lib/format";
 import Link from "next/link";
@@ -45,13 +43,6 @@ interface DashboardStats {
 
 const COLORS = ["#e11d48", "#10b981", "#3b82f6", "#f59e0b", "#8b5cf6", "#64748b"];
 
-interface LogEvent {
-  id: string;
-  time: string;
-  type: "info" | "success" | "warning" | "error";
-  message: string;
-}
-
 function DashboardContent() {
   const searchParams = useSearchParams();
   const sucursalSeleccionada = searchParams.get("sucursalId") || "todos";
@@ -67,51 +58,15 @@ function DashboardContent() {
   
   const [loading, setLoading] = useState<boolean>(true);
   const [alertasCriticas, setAlertasCriticas] = useState<any[]>([]);
+  const [alertasDescartadas, setAlertasDescartadas] = useState<number[]>([]);
+  const [showNotificationsModal, setShowNotificationsModal] = useState<boolean>(false);
   const [ventasData, setVentasData] = useState<any[]>([]);
   const [isMounted, setIsMounted] = useState<boolean>(false);
   const [timeRange, setTimeRange] = useState<string>("7D");
-  const [logs, setLogs] = useState<LogEvent[]>([
-    { id: "1", time: "19:28:10", type: "info", message: "Consola centralizada de trazabilidad inicializada." },
-    { id: "2", time: "19:29:15", type: "success", message: "Enlace cifrado con base de datos establecido." },
-    { id: "3", time: "19:30:04", type: "info", message: "Verificación automática de lotes finalizada. FIFO en cumplimiento." }
-  ]);
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
-
-  // Simulación de Live Audit Event Logs
-  useEffect(() => {
-    if (!isMounted) return;
-    const interval = setInterval(() => {
-      const types: LogEvent["type"][] = ["info", "success", "warning"];
-      const messages = [
-        "Sensor de cadena de frío reportó 2.3°C (Refrigerador Bioléctrico 01).",
-        "Dispensación autorizada para Paciente Ambulatorio.",
-        "Auditoría de estupefacientes: libro firmado digitalmente.",
-        "Sincronización de inventario finalizada en Sucursal Norte.",
-        "Verificación de receta médica completada con éxito.",
-        "Venta consolidada registrada en base de datos centralizada."
-      ];
-      
-      const randomType = types[Math.floor(Math.random() * types.length)];
-      const randomMessage = messages[Math.floor(Math.random() * messages.length)];
-      const now = new Date();
-      const timeStr = now.toTimeString().split(" ")[0];
-
-      setLogs(prev => [
-        {
-          id: String(Date.now()),
-          time: timeStr,
-          type: randomType,
-          message: randomMessage
-        },
-        ...prev.slice(0, 5)
-      ]);
-    }, 6000);
-
-    return () => clearInterval(interval);
-  }, [isMounted]);
 
   // Cargar métricas del backend reales
   const fetchDashboardData = useCallback(async () => {
@@ -276,6 +231,9 @@ function DashboardContent() {
   const breakdownSucursales = getSucursalesBreakdown();
   const breakdownCategorias = getCategoryBreakdown();
 
+  const activeAlertas = alertasCriticas.filter(a => !alertasDescartadas.includes(a.id));
+  const countAlertas = activeAlertas.length;
+
   const ultimasVentas = ventasData
     .slice()
     .sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime())
@@ -284,94 +242,205 @@ function DashboardContent() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "32px", fontFamily: "var(--font-body)" }}>
       
-      {/* ================= TELEMETRÍA SUPERIOR CLINICA ================= */}
+      {/* ================= CABECERA DE PANEL DE CONTROL ================= */}
       <div 
         style={{
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          background: "#ffffff",
-          border: "1px solid rgba(0, 0, 0, 0.05)",
-          borderRadius: "14px",
-          padding: "14px 24px",
+          background: "hsl(var(--card))",
+          padding: "20px 24px",
+          borderRadius: "var(--radius)",
+          border: "1px solid hsl(var(--card-border))",
           boxShadow: "var(--shadow-sm)"
         }}
         className="hidden-mobile"
       >
-        <div style={{ display: "flex", alignItems: "center", gap: "24px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <Server size={14} style={{ color: "#e11d48" }} />
-            <span style={{ fontSize: "0.76rem", color: "rgba(15,23,42,0.45)", fontWeight: 800 }}>AUDITORÍA DE ENLACE:</span>
-            <span style={{ 
-              fontSize: "0.7rem", 
-              fontWeight: 900, 
-              color: "#10b981", 
-              background: "rgba(16, 185, 129, 0.08)", 
-              padding: "2px 8px", 
-              borderRadius: "4px"
-            }}>
-              SHA-256 CONECTADO
-            </span>
-          </div>
-          <div style={{ width: "1px", height: "16px", background: "rgba(0,0,0,0.06)" }} />
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <Database size={14} style={{ color: "#e11d48" }} />
-            <span style={{ fontSize: "0.76rem", color: "rgba(15,23,42,0.45)", fontWeight: 800 }}>TRAZABILIDAD DE STOCK:</span>
-            <span style={{ fontSize: "0.76rem", color: "#0f172a", fontWeight: 900 }}>FIFO INTEGRADO</span>
-          </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+          <h3 style={{ fontSize: "1.2rem", fontWeight: 800 }}>Resumen de Operaciones</h3>
+          <p style={{ fontSize: "0.85rem", color: "hsl(var(--muted-foreground))" }}>
+            Monitoreo en tiempo real de ventas, inventario y alertas por sucursal.
+          </p>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.72rem", color: "rgba(15,23,42,0.45)", fontWeight: 800 }}>
-          <RefreshCw size={12} className="spin-icon" style={{ color: "#e11d48" }} />
-          <span>Sincronizado en vivo</span>
+
+        {/* Contenedor relativo para Notificación (Campana de Alertas) */}
+        <div style={{ position: "relative" }}>
+          <button 
+            type="button"
+            onClick={() => setShowNotificationsModal(prev => !prev)}
+            style={{
+              position: "relative",
+              background: countAlertas > 0 ? "rgba(225, 29, 72, 0.08)" : "rgba(15,23,42,0.04)",
+              border: countAlertas > 0 ? "1px solid rgba(225, 29, 72, 0.2)" : "1px solid rgba(0,0,0,0.06)",
+              borderRadius: "10px",
+              cursor: "pointer",
+              width: "42px",
+              height: "42px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: countAlertas > 0 ? "#e11d48" : "rgba(15,23,42,0.6)",
+              transition: "all 0.2s ease",
+            }}
+            title="Notificaciones"
+          >
+            <Bell size={18} />
+            {countAlertas > 0 && (
+              <span style={{
+                position: "absolute",
+                top: "-4px",
+                right: "-4px",
+                background: "#e11d48",
+                color: "#ffffff",
+                fontSize: "0.58rem",
+                fontWeight: 900,
+                borderRadius: "9999px",
+                width: countAlertas > 9 ? "auto" : "16px",
+                minWidth: "16px",
+                height: "16px",
+                padding: countAlertas > 9 ? "0 4px" : "0",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                border: "2px solid #ffffff",
+                boxShadow: "0 2px 4px rgba(225, 29, 72, 0.3)",
+                lineHeight: 1
+              }}>
+                {countAlertas}
+              </span>
+            )}
+          </button>
+
+          {/* MENÚ DE NOTIFICACIONES ALINEADO ABAJO */}
+          {showNotificationsModal && (
+            <>
+              {/* Overlay invisible para cerrar al hacer clic afuera */}
+              <div 
+                style={{
+                  position: "fixed",
+                  inset: 0,
+                  zIndex: 49,
+                  background: "transparent",
+                }}
+                onClick={() => setShowNotificationsModal(false)}
+              />
+              
+              {/* El panel/dropdown en sí */}
+              <div 
+                className="card animate-fade-in" 
+                style={{ 
+                  width: "380px", 
+                  position: "absolute", 
+                  top: "calc(100% + 8px)",
+                  right: 0,
+                  zIndex: 50,
+                  border: "1px solid rgba(15, 23, 42, 0.08)", 
+                  boxShadow: "0 10px 30px rgba(15, 23, 42, 0.08)",
+                  padding: "20px",
+                  background: "#ffffff",
+                  borderRadius: "12px",
+                }}
+              >
+                <button 
+                  onClick={() => setShowNotificationsModal(false)}
+                  style={{ position: "absolute", top: "14px", right: "14px", background: "none", border: "none", cursor: "pointer", color: "#64748b" }}
+                >
+                  <X size={16} />
+                </button>
+
+                <h3 style={{ marginBottom: "14px", fontSize: "1rem", fontWeight: 800, display: "flex", alignItems: "center", gap: "8px", color: "#0f172a" }}>
+                  <Bell size={16} style={{ color: "#e11d48" }} />
+                  Buzón de Alertas
+                  {countAlertas > 0 && (
+                    <span className="badge badge-danger" style={{ fontSize: "0.65rem", padding: "1px 5px", background: "rgba(225, 29, 72, 0.08)", color: "#e11d48", border: "1px solid rgba(225, 29, 72, 0.15)", borderRadius: "4px" }}>
+                      {countAlertas} Nuevas
+                    </span>
+                  )}
+                </h3>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: "8px", maxHeight: "250px", overflowY: "auto", paddingRight: "4px" }}>
+                  {countAlertas === 0 ? (
+                    <div style={{ textAlign: "center", padding: "24px 0", color: "#64748b" }}>
+                      <CheckCircle size={28} style={{ color: "#10b981", marginBottom: "6px" }} />
+                      <p style={{ fontSize: "0.85rem", fontWeight: 600 }}>¡Todo al día!</p>
+                      <p style={{ fontSize: "0.75rem" }}>No hay alertas críticas.</p>
+                    </div>
+                  ) : (
+                    activeAlertas.map((alerta) => {
+                      const isDanger = alerta.tipo === "danger";
+                      return (
+                        <div 
+                          key={alerta.id}
+                          style={{
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: "6px",
+                            padding: "10px",
+                            borderRadius: "6px",
+                            background: isDanger ? "rgba(225, 29, 72, 0.02)" : "rgba(245, 158, 11, 0.02)",
+                            border: `1px solid ${isDanger ? "rgba(225, 29, 72, 0.08)" : "rgba(245, 158, 11, 0.08)"}`,
+                            position: "relative"
+                          }}
+                        >
+                          <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                            <span style={{ 
+                              fontWeight: 850, 
+                              fontSize: "0.65rem", 
+                              textTransform: "uppercase", 
+                              letterSpacing: "0.05em",
+                              color: isDanger ? "#e11d48" : "#d97706",
+                            }}>
+                              {isDanger ? "Crítico" : "Advertencia"}
+                            </span>
+                          </div>
+
+                          <p style={{ fontSize: "0.78rem", color: "#334155", margin: 0, fontWeight: 550, lineHeight: 1.35 }}>
+                            {alerta.mensaje.replace("ALERTA DE SEGURIDAD: ", "").replace("ADVERTENCIA: ", "")}
+                          </p>
+
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "2px" }}>
+                            <Link 
+                              href="/admin/vencimiento" 
+                              onClick={() => setShowNotificationsModal(false)}
+                              style={{ 
+                                color: isDanger ? "#e11d48" : "#d97706",
+                                fontSize: "0.72rem", 
+                                fontWeight: 800, 
+                                textDecoration: "underline",
+                                textUnderlineOffset: "2px"
+                              }}
+                            >
+                              {isDanger ? "Retirar lotes" : "Gestionar"}
+                            </Link>
+                            
+                            <button
+                              onClick={() => setAlertasDescartadas(prev => [...prev, alerta.id])}
+                              style={{
+                                background: "none",
+                                border: "none",
+                                color: "#94a3b8",
+                                cursor: "pointer",
+                                fontSize: "0.72rem",
+                                fontWeight: 600,
+                                textDecoration: "underline",
+                                padding: 0
+                              }}
+                            >
+                              Descartar
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
-      {/* ================= SECCIÓN DE ALERTAS CRÍTICAS ================= */}
-      {alertasCriticas.length > 0 && (
-        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-          {alertasCriticas.map((alerta) => (
-            <div 
-              key={alerta.id} 
-              className="pulse-alert"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "16px",
-                padding: "16px 24px",
-                borderRadius: "14px",
-                background: alerta.tipo === "danger" ? "rgba(225, 29, 72, 0.04)" : "rgba(245, 158, 11, 0.04)",
-                border: `1px solid ${alerta.tipo === "danger" ? "rgba(225, 29, 72, 0.15)" : "rgba(245, 158, 11, 0.15)"}`,
-                color: alerta.tipo === "danger" ? "#e11d48" : "#d97706",
-              }}
-            >
-              <AlertOctagon size={22} style={{ flexShrink: 0, color: alerta.tipo === "danger" ? "#e11d48" : "#f59e0b" }} />
-              <div style={{ flex: 1, fontSize: "0.92rem", fontWeight: 800 }}>
-                {alerta.mensaje}
-              </div>
-              <Link 
-                href="/admin/vencimiento" 
-                style={{ 
-                  color: "#fff",
-                  background: alerta.tipo === "danger" ? "#e11d48" : "#f59e0b",
-                  fontSize: "0.78rem", 
-                  fontWeight: 900, 
-                  padding: "8px 16px",
-                  borderRadius: "8px",
-                  textDecoration: "none",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  boxShadow: alerta.tipo === "danger" ? "0 4px 12px rgba(225, 29, 72, 0.2)" : "none"
-                }}
-                className="hover-bounce"
-              >
-                {alerta.tipo === "danger" ? "Retiro Inmediato" : "Revisar Lotes"}
-                <ArrowRight size={14} />
-              </Link>
-            </div>
-          ))}
-        </div>
-      )}
+
 
       {/* ================= TELEMETRÍA METRICAS (KPI CARDS) ================= */}
       <div className="grid-4">
@@ -438,7 +507,7 @@ function DashboardContent() {
               {stats.productosBajoStock}
             </span>
             <span style={{ fontSize: "0.76rem", color: stats.productosBajoStock > 0 ? "#e11d48" : "rgba(15, 23, 42, 0.4)", fontWeight: 700 }}>
-              {stats.productosBajoStock > 0 ? "⚠️ Reposición Requerida" : "Stock Óptimo"}
+              {stats.productosBajoStock > 0 ? "Reposición Requerida" : "Stock Óptimo"}
             </span>
           </div>
           <div style={{ marginTop: "4px" }}>
@@ -486,7 +555,7 @@ function DashboardContent() {
               {stats.lotesPorVencer}
             </span>
             <span style={{ fontSize: "0.76rem", color: stats.lotesVencidos > 0 ? "#e11d48" : "rgba(15, 23, 42, 0.4)", fontWeight: 700 }}>
-              {stats.lotesVencidos > 0 ? `⚠️ ${stats.lotesVencidos} VENCIDOS` : "Sin Lotes Críticos"}
+              {stats.lotesVencidos > 0 ? `${stats.lotesVencidos} VENCIDOS` : "Sin Lotes Críticos"}
             </span>
           </div>
           <div style={{ marginTop: "4px" }}>
@@ -721,21 +790,46 @@ function DashboardContent() {
             </div>
           </div>
 
-          {/* Logs / Bitácora de Farmacovigilancia en Claro */}
-          <div className="glass-card-premium" style={{ flex: 1, display: "flex", flexDirection: "column", gap: "12px", padding: "20px" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyItems: "center", gap: "8px" }}>
-              <ShieldCheck size={14} style={{ color: "#e11d48" }} />
-              <span style={{ fontSize: "0.72rem", color: "rgba(15,23,42,0.5)", fontWeight: 800, letterSpacing: "0.08em" }}>
-                BITÁCORA EN TIEMPO REAL
-              </span>
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: "8px", overflow: "hidden" }}>
-              {logs.map((log) => (
-                <div key={log.id} style={{ display: "flex", gap: "8px", fontSize: "0.68rem", lineHeight: 1.3 }} className="fade-in">
-                  <span style={{ color: "#e11d48", fontWeight: 800 }}>[{log.time}]</span>
-                  <span style={{ color: "rgba(15,23,42,0.65)", fontWeight: 600 }}>{log.message}</span>
+          {/* Distribución por Categorías */}
+          <div className="glass-card-premium" style={{ flex: 1, display: "flex", flexDirection: "column", gap: "16px", padding: "24px" }}>
+            <h3 style={{ fontSize: "1.05rem", fontWeight: 950, letterSpacing: "-0.01em", color: "#0f172a" }}>
+              Distribución por Categorías
+            </h3>
+            
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px", overflowY: "auto", maxHeight: "150px" }}>
+              {breakdownCategorias.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "16px 0", color: "rgba(15,23,42,0.4)", fontSize: "0.85rem" }}>
+                  Sin datos de categorías
                 </div>
-              ))}
+              ) : (
+                (() => {
+                  const totalVentas = breakdownCategorias.reduce((acc, curr) => acc + curr.value, 0);
+                  return breakdownCategorias.map((cat, index) => {
+                    const percentage = totalVentas > 0 ? (cat.value / totalVentas) * 100 : 0;
+                    return (
+                      <div key={index} style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.75rem", fontWeight: 800 }}>
+                          <span style={{ color: "#0f172a", textTransform: "capitalize" }}>{cat.name}</span>
+                          <span style={{ color: "rgba(15, 23, 42, 0.5)" }}>
+                            S/ {Number(cat.value).toFixed(0)} ({percentage.toFixed(0)}%)
+                          </span>
+                        </div>
+                        <div style={{ width: "100%", height: "6px", background: "rgba(0,0,0,0.04)", borderRadius: "3px", overflow: "hidden" }}>
+                          <div 
+                            style={{ 
+                              width: `${percentage}%`, 
+                              height: "100%", 
+                              background: COLORS[index % COLORS.length],
+                              borderRadius: "3px",
+                              transition: "width 0.5s ease-in-out"
+                            }} 
+                          />
+                        </div>
+                      </div>
+                    );
+                  });
+                })()
+              )}
             </div>
           </div>
         </div>
@@ -922,23 +1016,22 @@ function DashboardContent() {
           </Link>
         </div>
       </div>
-      
+
       {/* Animaciones locales */}
       <style jsx>{`
-        @keyframes pulseAlert {
-          0% { box-shadow: 0 0 12px rgba(225, 29, 72, 0.06); border-color: rgba(225, 29, 72, 0.25); }
-          50% { box-shadow: 0 0 20px rgba(225, 29, 72, 0.18); border-color: rgba(225, 29, 72, 0.4); }
-          100% { box-shadow: 0 0 12px rgba(225, 29, 72, 0.06); border-color: rgba(225, 29, 72, 0.25); }
-        }
-        :global(.pulse-alert) {
-          animation: pulseAlert 2.5s infinite ease-in-out;
-        }
         @keyframes spinIcon {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
         }
         :global(.spin-icon) {
           animation: spinIcon 8s infinite linear;
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(-8px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        :global(.animate-fade-in) {
+          animation: fadeIn 0.15s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
       `}</style>
     </div>

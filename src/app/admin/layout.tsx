@@ -48,7 +48,7 @@ export default async function AdminLayout({
             gap: "12px",
           }}
         >
-          <LogoFarmacia size={36} />
+          <LogoFarmacia size={36} glow={false} />
           <div style={{ display: "flex", flexDirection: "column" }}>
             <span style={{ fontWeight: 900, fontSize: "1.1rem", letterSpacing: "-0.02em", color: "hsl(var(--foreground))" }}>
               PHARMA SALUD

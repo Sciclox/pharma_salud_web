@@ -6,6 +6,7 @@ declare module "next-auth" {
     role?: string;
     sucursalId?: number | null;
     sucursalName?: string | null;
+    genero?: string | null;
   }
 
   interface Session {
@@ -14,6 +15,7 @@ declare module "next-auth" {
       role: string;
       sucursalId: number | null;
       sucursalName: string | null;
+      genero: string | null;
     } & DefaultSession["user"];
   }
 }
@@ -24,5 +26,6 @@ declare module "next-auth/jwt" {
     role?: string;
     sucursalId?: number | null;
     sucursalName?: string | null;
+    genero?: string | null;
   }
 }

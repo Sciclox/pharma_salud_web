@@ -42,7 +42,7 @@ const slides = [
     eyebrow: "Gestión para decisiones",
     title: "Analítica clara para administrar mejor",
     text: "Convierte ventas, sucursales y comportamiento del inventario en indicadores útiles para decidir con calma.",
-    metric: "360",
+    metric: "360°",
     label: "Vista central",
     icon: BarChart3,
     details: ["Panel administrativo", "Reportes visuales", "Seguimiento diario"],
@@ -62,7 +62,6 @@ export default function LoginPage() {
     const timer = window.setInterval(() => {
       setActiveSlide((current) => (current + 1) % slides.length);
     }, 5200);
-
     return () => window.clearInterval(timer);
   }, []);
 
@@ -71,27 +70,22 @@ export default function LoginPage() {
 
   const handleLogin = async (event: React.FormEvent) => {
     event.preventDefault();
-
     if (!username.trim() || !password.trim()) {
       setError("Ingrese su usuario y contraseña corporativa.");
       return;
     }
-
     setLoading(true);
     setError(null);
-
     try {
       const result = await signIn("credentials", {
         username: username.toLowerCase().trim(),
         password,
         redirect: false,
       });
-
       if (result?.error) {
-        setError("Matrícula o contraseña incorrectas, o cuenta de usuario inactiva.");
+        setError("Credenciales incorrectas o cuenta inactiva.");
         return;
       }
-
       const resSession = await fetch("/api/auth/session");
       if (resSession.ok) {
         const session = await resSession.json();
@@ -100,645 +94,754 @@ export default function LoginPage() {
       }
     } catch (err) {
       console.error(err);
-      setError("Falló la conexión con el servidor de seguridad central.");
+      setError("Falló la conexión con el servidor.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <main className="login-shell">
-      <section className="onboarding-panel hidden-mobile" aria-label="Introducción al sistema">
-        <div className="panel-grid" />
+    <main className="ls-root">
+      {/* ── Panel izquierdo ── */}
+      <section className="ls-left" aria-label="Presentación del sistema">
+        {/* Imagen de fondo + overlay */}
+        <div className="ls-left-bg" />
+        <div className="ls-left-overlay" />
 
-        <header className="brand-row">
-          <LogoFarmacia size={48} />
-          <div>
-            <p className="brand-name">
-              PHARMA SALUD <span>•</span>
-            </p>
-            <p className="brand-subtitle">Sistema central de gestión farmacéutica</p>
-          </div>
-        </header>
+        {/* Contenido sobre la imagen */}
+        <div className="ls-left-inner">
+          {/* Logo */}
+          <header className="ls-brand">
+            <div className="ls-logo-wrap">
+              <LogoFarmacia size={34} />
+            </div>
+            <div>
+              <p className="ls-brand-name">PHARMA SALUD</p>
+              <p className="ls-brand-tag">Sistema de gestión farmacéutica</p>
+            </div>
+          </header>
 
-        <div className="onboarding-stage" aria-live="polite">
-          <div className="slide-kicker">
-            <Sparkles size={16} />
-            {slide.eyebrow}
-          </div>
-
-          <div className="slide-copy" key={slide.title}>
-            <h1>{slide.title}</h1>
-            <p>{slide.text}</p>
-          </div>
-
-          <div className="system-preview">
-            <div className="preview-header">
-              <span>Vista del sistema</span>
-              <div className="preview-status">
-                <span />
-                Operativo
-              </div>
+          {/* Slide principal */}
+          <div className="ls-stage" aria-live="polite">
+            <div className="ls-eyebrow">
+              <Sparkles size={13} />
+              {slide.eyebrow}
             </div>
 
-            <div className="preview-body">
-              <div className="metric-tile">
-                <SlideIcon size={26} />
-                <strong>{slide.metric}</strong>
-                <small>{slide.label}</small>
-              </div>
+            <div className="ls-headline" key={slide.title}>
+              <h1>{slide.title}</h1>
+              <p>{slide.text}</p>
+            </div>
 
-              <div className="detail-list">
-                {slide.details.map((detail) => (
-                  <div key={detail}>
-                    <CheckCircle2 size={17} />
-                    <span>{detail}</span>
-                  </div>
-                ))}
+            {/* Card de preview */}
+            <div className="ls-preview-card">
+              <div className="ls-preview-header">
+                <span>Vista del sistema</span>
+                <span className="ls-status-dot">
+                  <span />
+                  Operativo
+                </span>
+              </div>
+              <div className="ls-preview-body">
+                <div className="ls-metric-tile">
+                  <SlideIcon size={22} strokeWidth={1.5} />
+                  <strong>{slide.metric}</strong>
+                  <small>{slide.label}</small>
+                </div>
+                <div className="ls-detail-list">
+                  {slide.details.map((d) => (
+                    <div key={d} className="ls-detail-row">
+                      <CheckCircle2 size={15} strokeWidth={2} />
+                      <span>{d}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
+
+          {/* Footer */}
+          <footer className="ls-left-footer">
+            <div className="ls-dots" aria-label="Navegación de slides">
+              {slides.map((item, index) => (
+                <button
+                  key={item.title}
+                  type="button"
+                  className={`ls-dot${index === activeSlide ? " ls-dot-active" : ""}`}
+                  onClick={() => setActiveSlide(index)}
+                  aria-label={`Slide ${index + 1}`}
+                />
+              ))}
+            </div>
+            <div className="ls-secure">
+              <ShieldCheck size={14} strokeWidth={2} />
+              Acceso cifrado · Personal autorizado
+            </div>
+          </footer>
         </div>
-
-        <footer className="onboarding-footer">
-          <div className="page-dots" aria-label="Páginas del onboarding">
-            {slides.map((item, index) => (
-              <button
-                key={item.title}
-                type="button"
-                className={index === activeSlide ? "active" : ""}
-                aria-label={`Ver página ${index + 1}: ${item.eyebrow}`}
-                aria-current={index === activeSlide ? "true" : undefined}
-                onClick={() => setActiveSlide(index)}
-              />
-            ))}
-          </div>
-
-          <div className="secure-strip">
-            <ShieldCheck size={18} />
-            Acceso cifrado para personal autorizado
-          </div>
-        </footer>
       </section>
 
-      <section className="login-panel" aria-label="Acceso al sistema">
-        <div className="login-card">
-          <div className="mobile-brand">
-            <LogoFarmacia size={42} />
+      {/* ── Panel derecho ── */}
+      <section className="ls-right" aria-label="Acceso al sistema">
+        <div className="ls-form-wrap">
+          {/* Marca mobile */}
+          <div className="ls-mobile-brand">
+            <LogoFarmacia size={38} />
             <div>
               <p>PHARMA SALUD</p>
               <span>Trazabilidad farmacéutica</span>
             </div>
           </div>
 
-          <div className="form-heading">
-            <span className="access-pill">
-              <Lock size={14} />
+          {/* Cabecera del formulario */}
+          <div className="ls-form-head">
+            <span className="ls-badge">
+              <Lock size={12} strokeWidth={2.5} />
               Acceso interno
             </span>
-            <h2>Control de acceso</h2>
-            <p>Ingrese sus credenciales para entrar a la consola centralizada.</p>
+            <h2>Bienvenido de vuelta</h2>
+            <p>Ingrese sus credenciales para acceder a la consola centralizada.</p>
           </div>
 
+          {/* Error */}
           {error && (
-            <div className="error-box" role="alert">
-              <AlertCircle size={16} />
+            <div className="ls-error" role="alert">
+              <AlertCircle size={15} strokeWidth={2} />
               <span>{error}</span>
             </div>
           )}
 
-          <form onSubmit={handleLogin} className="login-form">
-            <label className="field-group">
+          {/* Formulario */}
+          <form onSubmit={handleLogin} className="ls-form">
+            <label className="ls-field">
               <span>Identificador de personal</span>
-              <div className="input-wrap">
-                <User size={17} />
+              <div className="ls-input-wrap">
+                <User size={16} strokeWidth={1.75} className="ls-input-icon" />
                 <input
                   type="text"
                   placeholder="Ej. admin"
                   value={username}
-                  onChange={(event) => setUsername(event.target.value)}
+                  onChange={(e) => setUsername(e.target.value)}
                   disabled={loading}
                   autoComplete="username"
+                  autoFocus
                 />
               </div>
             </label>
 
-            <label className="field-group">
-              <span>Clave de seguridad corporativa</span>
-              <div className="input-wrap">
-                <Lock size={17} />
+            <label className="ls-field">
+              <span>Clave de seguridad</span>
+              <div className="ls-input-wrap">
+                <Lock size={16} strokeWidth={1.75} className="ls-input-icon" />
                 <input
                   type={showPassword ? "text" : "password"}
                   placeholder="Ingrese su contraseña"
                   value={password}
-                  onChange={(event) => setPassword(event.target.value)}
+                  onChange={(e) => setPassword(e.target.value)}
                   disabled={loading}
                   autoComplete="current-password"
                 />
                 <button
                   type="button"
-                  className="ghost-icon"
-                  onClick={() => setShowPassword((value) => !value)}
+                  className="ls-eye-btn"
+                  onClick={() => setShowPassword((v) => !v)}
                   aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
                 >
-                  {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+                  {showPassword ? <EyeOff size={16} strokeWidth={1.75} /> : <Eye size={16} strokeWidth={1.75} />}
                 </button>
               </div>
             </label>
 
-            <button type="submit" className="submit-button" disabled={loading}>
-              <span>{loading ? "Verificando..." : "Ingresar a consola"}</span>
-              <ArrowRight size={18} />
+            <button type="submit" className="ls-submit" disabled={loading}>
+              {loading ? (
+                <>
+                  <span className="ls-spinner" />
+                  Verificando...
+                </>
+              ) : (
+                <>
+                  Ingresar a consola
+                  <ArrowRight size={17} strokeWidth={2} />
+                </>
+              )}
             </button>
           </form>
+
+          <p className="ls-footer-note">
+            Sistema exclusivo para personal de Pharma Salud.<br />
+            Si no tienes acceso, contacta al administrador.
+          </p>
         </div>
       </section>
 
       <style>{`
-        .login-shell {
+        /* ── Tokens ── */
+        .ls-root {
+          --red:       #e11d48;
+          --red-dark:  #be123c;
+          --red-glow:  rgba(225,29,72,.18);
+          --navy:      #050d1f;
+          --navy-2:    #0b1629;
+          --blue-acc:  #0ea5e9;
+          --text-inv:  #f8fafc;
+          --text-muted-inv: rgba(248,250,252,.55);
+          --border-inv: rgba(255,255,255,.08);
+          --bg-form:   #f4f6f9;
+          --text-dark: #0f172a;
+          --text-muted: #64748b;
+          --border:    rgba(15,23,42,.1);
+          --radius:    16px;
+          --radius-sm: 10px;
+
           width: 100vw;
-          min-height: 100vh;
+          min-height: 100dvh;
           display: grid;
-          grid-template-columns: minmax(520px, 1.15fr) minmax(390px, 0.85fr);
-          gap: 18px;
-          padding: 18px;
-          overflow-x: hidden;
-          color: #0f172a;
-          font-family: var(--font-heading), system-ui, -apple-system, sans-serif;
-          background:
-            linear-gradient(110deg, rgba(244, 246, 249, 0.96), rgba(255, 255, 255, 0.7)),
-            url("/pharmacy_login_bg.png") center / cover no-repeat;
-        }
-
-        .onboarding-panel,
-        .login-panel {
-          position: relative;
-          min-height: calc(100vh - 36px);
+          grid-template-columns: 1.15fr 0.85fr;
+          background: var(--navy);
+          font-family: var(--font-outfit), system-ui, -apple-system, sans-serif;
           overflow: hidden;
-          border: 1px solid rgba(15, 23, 42, 0.08);
-          border-radius: 20px;
         }
 
-        .onboarding-panel {
+        /* ── Panel izquierdo ── */
+        .ls-left {
+          position: relative;
+          min-height: 100dvh;
+          overflow: hidden;
+        }
+
+        .ls-left-bg {
+          position: absolute;
+          inset: 0;
+          background: url('/login_panel_bg.png') center/cover no-repeat;
+          z-index: 0;
+        }
+
+        .ls-left-overlay {
+          position: absolute;
+          inset: 0;
+          background:
+            linear-gradient(160deg,
+              rgba(5,13,31,.82) 0%,
+              rgba(5,13,31,.55) 50%,
+              rgba(5,13,31,.78) 100%
+            );
+          z-index: 1;
+        }
+
+        .ls-left-inner {
+          position: relative;
+          z-index: 2;
           display: flex;
           flex-direction: column;
           justify-content: space-between;
-          padding: clamp(32px, 4vw, 58px);
-          background:
-            linear-gradient(145deg, rgba(255, 255, 255, 0.9), rgba(239, 253, 250, 0.72)),
-            radial-gradient(circle at 18% 18%, rgba(225, 29, 72, 0.12), transparent 30%),
-            radial-gradient(circle at 86% 74%, rgba(14, 165, 233, 0.14), transparent 28%);
-          box-shadow: 0 24px 70px rgba(15, 23, 42, 0.08);
+          height: 100%;
+          min-height: 100dvh;
+          padding: clamp(28px, 4vw, 52px);
         }
 
-        .panel-grid {
-          position: absolute;
-          inset: 0;
-          pointer-events: none;
-          opacity: 0.34;
-          background-image:
-            linear-gradient(rgba(15, 23, 42, 0.055) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(15, 23, 42, 0.055) 1px, transparent 1px);
-          background-size: 44px 44px;
-          mask-image: linear-gradient(90deg, #000, transparent 88%);
-        }
-
-        .brand-row,
-        .onboarding-stage,
-        .onboarding-footer {
-          position: relative;
-          z-index: 2;
-        }
-
-        .brand-row {
+        /* Marca */
+        .ls-brand {
           display: flex;
           align-items: center;
-          gap: 16px;
+          gap: 14px;
         }
 
-        .brand-name {
+        .ls-logo-wrap {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 48px;
+          height: 48px;
+          border-radius: 12px;
+          background: rgba(255,255,255,.06);
+          border: 1px solid var(--border-inv);
+          backdrop-filter: blur(12px);
+        }
+
+        .ls-brand-name {
           margin: 0;
-          color: #0f172a;
-          font-size: 1.22rem;
-          font-weight: 950;
+          color: var(--text-inv);
+          font-size: 1.05rem;
+          font-weight: 800;
+          letter-spacing: 0.04em;
           line-height: 1;
         }
 
-        .brand-name span {
-          color: #e11d48;
-        }
-
-        .brand-subtitle {
-          margin-top: 7px;
-          color: #64748b;
-          font-size: 0.72rem;
-          font-weight: 850;
+        .ls-brand-tag {
+          margin-top: 5px;
+          color: var(--text-muted-inv);
+          font-size: 0.7rem;
+          font-weight: 600;
           letter-spacing: 0.08em;
-          line-height: 1.35;
           text-transform: uppercase;
         }
 
-        .onboarding-stage {
-          width: min(100%, 680px);
+        /* Stage / Slides */
+        .ls-stage {
           display: flex;
           flex-direction: column;
-          gap: 28px;
+          gap: 24px;
           margin: auto 0;
+          max-width: 560px;
         }
 
-        .slide-kicker,
-        .access-pill,
-        .secure-strip,
-        .preview-status,
-        .detail-list div,
-        .preview-header,
-        .preview-body,
-        .metric-tile,
-        .onboarding-footer {
+        .ls-eyebrow {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          width: fit-content;
+          padding: 7px 13px;
+          border-radius: 999px;
+          background: rgba(225,29,72,.15);
+          border: 1px solid rgba(225,29,72,.25);
+          color: #fb7185;
+          font-size: 0.75rem;
+          font-weight: 700;
+          letter-spacing: 0.06em;
+          text-transform: uppercase;
+        }
+
+        .ls-headline {
+          animation: ls-fade-up 0.5s cubic-bezier(.16,1,.3,1) both;
+        }
+
+        .ls-headline h1 {
+          margin: 0;
+          color: var(--text-inv);
+          font-size: clamp(2.2rem, 4vw, 3.8rem);
+          font-weight: 900;
+          line-height: 1.02;
+          letter-spacing: -0.03em;
+          text-shadow: 0 2px 30px rgba(0,0,0,.4);
+        }
+
+        .ls-headline p {
+          margin-top: 16px;
+          color: var(--text-muted-inv);
+          font-size: 1rem;
+          font-weight: 500;
+          line-height: 1.65;
+          max-width: 480px;
+        }
+
+        /* Preview card */
+        .ls-preview-card {
+          padding: 18px 20px;
+          border-radius: var(--radius);
+          background: rgba(255,255,255,.06);
+          border: 1px solid var(--border-inv);
+          backdrop-filter: blur(20px);
+          -webkit-backdrop-filter: blur(20px);
+          box-shadow: 0 24px 60px rgba(0,0,0,.3);
+        }
+
+        .ls-preview-header {
           display: flex;
           align-items: center;
-        }
-
-        .slide-kicker {
-          width: fit-content;
-          gap: 9px;
-          padding: 9px 13px;
-          color: #be123c;
-          background: rgba(225, 29, 72, 0.08);
-          border: 1px solid rgba(225, 29, 72, 0.12);
-          border-radius: 999px;
-          font-size: 0.78rem;
-          font-weight: 900;
-        }
-
-        .slide-copy {
-          animation: slideIn 0.55s ease both;
-        }
-
-        .slide-copy h1 {
-          max-width: 620px;
-          margin: 0;
-          color: #0f172a;
-          font-size: clamp(2.6rem, 5vw, 4.85rem);
-          font-weight: 950;
-          line-height: 0.98;
-          letter-spacing: 0;
-        }
-
-        .slide-copy p {
-          max-width: 560px;
-          margin-top: 20px;
-          color: #475569;
-          font-size: 1.03rem;
-          font-weight: 650;
-          line-height: 1.65;
-        }
-
-        .system-preview {
-          width: min(100%, 560px);
-          padding: 18px;
-          background: rgba(255, 255, 255, 0.78);
-          border: 1px solid rgba(15, 23, 42, 0.08);
-          border-radius: 18px;
-          box-shadow: 0 20px 45px rgba(15, 23, 42, 0.08);
-          backdrop-filter: blur(14px);
-        }
-
-        .preview-header {
           justify-content: space-between;
-          padding-bottom: 16px;
-          color: #334155;
-          font-size: 0.78rem;
-          font-weight: 900;
+          padding-bottom: 14px;
+          border-bottom: 1px solid var(--border-inv);
+          color: var(--text-muted-inv);
+          font-size: 0.73rem;
+          font-weight: 700;
           text-transform: uppercase;
           letter-spacing: 0.07em;
         }
 
-        .preview-status {
+        .ls-status-dot {
+          display: flex;
+          align-items: center;
           gap: 7px;
-          color: #059669;
+          color: #34d399;
+          font-size: 0.73rem;
+          font-weight: 700;
         }
 
-        .preview-status span {
-          width: 8px;
-          height: 8px;
+        .ls-status-dot span {
+          width: 7px;
+          height: 7px;
           border-radius: 50%;
           background: #10b981;
-          box-shadow: 0 0 0 5px rgba(16, 185, 129, 0.12);
+          box-shadow: 0 0 0 4px rgba(16,185,129,.18);
         }
 
-        .preview-body {
+        .ls-preview-body {
+          display: flex;
           gap: 16px;
+          margin-top: 14px;
         }
 
-        .metric-tile {
-          width: 154px;
-          min-height: 145px;
+        .ls-metric-tile {
+          display: flex;
           flex-direction: column;
+          align-items: center;
           justify-content: center;
-          gap: 9px;
+          gap: 8px;
+          width: 130px;
+          min-height: 130px;
+          flex-shrink: 0;
+          border-radius: 12px;
+          background: linear-gradient(145deg, var(--red) 0%, #7f1d1d 100%);
           color: #fff;
-          border-radius: 14px;
-          background: linear-gradient(145deg, #0f172a, #1e293b 58%, #be123c);
-          box-shadow: 0 18px 35px rgba(15, 23, 42, 0.22);
+          box-shadow: 0 12px 30px rgba(225,29,72,.35);
         }
 
-        .metric-tile strong {
-          font-size: 2.15rem;
-          font-weight: 950;
+        .ls-metric-tile strong {
+          font-size: 1.9rem;
+          font-weight: 900;
           line-height: 1;
+          letter-spacing: -0.02em;
         }
 
-        .metric-tile small {
-          color: rgba(255, 255, 255, 0.76);
-          font-size: 0.74rem;
-          font-weight: 800;
+        .ls-metric-tile small {
+          font-size: 0.68rem;
+          font-weight: 700;
+          color: rgba(255,255,255,.7);
+          letter-spacing: 0.06em;
+          text-transform: uppercase;
         }
 
-        .detail-list {
+        .ls-detail-list {
           flex: 1;
-          display: grid;
-          gap: 10px;
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          justify-content: center;
         }
 
-        .detail-list div {
+        .ls-detail-row {
+          display: flex;
+          align-items: center;
           gap: 10px;
-          min-height: 42px;
           padding: 10px 12px;
-          color: #334155;
-          background: #fff;
-          border: 1px solid rgba(15, 23, 42, 0.06);
-          border-radius: 10px;
-          font-size: 0.86rem;
-          font-weight: 800;
+          border-radius: 9px;
+          background: rgba(255,255,255,.05);
+          border: 1px solid var(--border-inv);
+          color: var(--text-inv);
+          font-size: 0.85rem;
+          font-weight: 600;
         }
 
-        .detail-list svg {
-          color: #10b981;
+        .ls-detail-row svg {
+          color: #34d399;
           flex-shrink: 0;
         }
 
-        .onboarding-footer {
-          justify-content: space-between;
-          gap: 20px;
-        }
-
-        .page-dots {
+        /* Footer izquierdo */
+        .ls-left-footer {
           display: flex;
-          gap: 10px;
+          align-items: center;
+          justify-content: space-between;
+          gap: 16px;
         }
 
-        .page-dots button {
-          width: 36px;
-          height: 8px;
+        .ls-dots {
+          display: flex;
+          gap: 8px;
+        }
+
+        .ls-dot {
+          width: 28px;
+          height: 4px;
           padding: 0;
           border: 0;
           border-radius: 999px;
-          background: rgba(15, 23, 42, 0.14);
+          background: rgba(255,255,255,.22);
           cursor: pointer;
-          transition: width 0.25s ease, background 0.25s ease;
+          transition: width .25s ease, background .25s ease;
         }
 
-        .page-dots button.active {
-          width: 66px;
-          background: #e11d48;
+        .ls-dot-active {
+          width: 52px;
+          background: var(--red);
         }
 
-        .secure-strip {
-          gap: 9px;
-          color: #334155;
-          font-size: 0.78rem;
-          font-weight: 900;
-          padding: 10px 13px;
-          background: rgba(255, 255, 255, 0.72);
-          border: 1px solid rgba(15, 23, 42, 0.08);
-          border-radius: 999px;
+        .ls-secure {
+          display: flex;
+          align-items: center;
+          gap: 7px;
+          color: var(--text-muted-inv);
+          font-size: 0.72rem;
+          font-weight: 600;
+          letter-spacing: 0.04em;
         }
 
-        .login-panel {
+        .ls-secure svg { color: #34d399; }
+
+        /* ── Panel derecho ── */
+        .ls-right {
           display: flex;
           align-items: center;
           justify-content: center;
-          padding: clamp(22px, 4vw, 48px);
-          background: rgba(244, 246, 249, 0.62);
-          backdrop-filter: blur(22px);
+          min-height: 100dvh;
+          padding: clamp(24px, 4vw, 52px);
+          background: var(--bg-form);
         }
 
-        .login-card {
-          width: min(100%, 430px);
-          padding: clamp(28px, 4vw, 42px);
-          background: rgba(255, 255, 255, 0.96);
-          border: 1px solid rgba(15, 23, 42, 0.07);
-          border-radius: 18px;
-          box-shadow: 0 24px 65px rgba(15, 23, 42, 0.1);
+        .ls-form-wrap {
+          width: min(100%, 420px);
+          display: flex;
+          flex-direction: column;
+          gap: 0;
         }
 
-        .mobile-brand {
+        /* Marca mobile */
+        .ls-mobile-brand {
           display: none;
           align-items: center;
           gap: 12px;
-          margin-bottom: 28px;
+          margin-bottom: 32px;
         }
 
-        .mobile-brand p {
+        .ls-mobile-brand p {
           margin: 0;
-          color: #0f172a;
-          font-weight: 950;
+          color: var(--text-dark);
+          font-weight: 900;
+          font-size: 1.05rem;
+          letter-spacing: 0.04em;
           line-height: 1;
         }
 
-        .mobile-brand span {
-          color: #64748b;
-          font-size: 0.68rem;
-          font-weight: 850;
+        .ls-mobile-brand span {
+          color: var(--text-muted);
+          font-size: 0.7rem;
+          font-weight: 600;
           text-transform: uppercase;
           letter-spacing: 0.06em;
         }
 
-        .form-heading {
-          margin-bottom: 28px;
+        /* Cabecera form */
+        .ls-form-head {
+          margin-bottom: 32px;
         }
 
-        .access-pill {
-          width: fit-content;
-          gap: 7px;
-          margin-bottom: 16px;
-          padding: 8px 11px;
-          color: #be123c;
-          background: rgba(225, 29, 72, 0.07);
-          border: 1px solid rgba(225, 29, 72, 0.12);
+        .ls-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          margin-bottom: 18px;
+          padding: 6px 12px;
           border-radius: 999px;
-          font-size: 0.76rem;
-          font-weight: 900;
-        }
-
-        .form-heading h2 {
-          margin: 0;
-          color: #0f172a;
-          font-size: 1.9rem;
-          font-weight: 950;
-          letter-spacing: 0;
-        }
-
-        .form-heading p {
-          margin-top: 9px;
-          color: #64748b;
-          font-size: 0.92rem;
-          font-weight: 650;
-        }
-
-        .error-box {
-          display: flex;
-          align-items: flex-start;
-          gap: 10px;
-          margin-bottom: 22px;
-          padding: 13px 15px;
-          color: #be123c;
-          background: rgba(225, 29, 72, 0.055);
-          border: 1px solid rgba(225, 29, 72, 0.16);
-          border-radius: 12px;
-          font-size: 0.86rem;
-          font-weight: 750;
-          line-height: 1.45;
-        }
-
-        .login-form {
-          display: flex;
-          flex-direction: column;
-          gap: 18px;
-        }
-
-        .field-group {
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-          color: #475569;
-          font-size: 0.75rem;
-          font-weight: 900;
-          letter-spacing: 0.05em;
+          background: rgba(225,29,72,.07);
+          border: 1px solid rgba(225,29,72,.15);
+          color: var(--red-dark);
+          font-size: 0.72rem;
+          font-weight: 800;
+          letter-spacing: 0.06em;
           text-transform: uppercase;
         }
 
-        .input-wrap {
+        .ls-form-head h2 {
+          margin: 0 0 8px;
+          color: var(--text-dark);
+          font-size: 1.85rem;
+          font-weight: 900;
+          letter-spacing: -0.03em;
+          line-height: 1.1;
+        }
+
+        .ls-form-head p {
+          margin: 0;
+          color: var(--text-muted);
+          font-size: 0.92rem;
+          font-weight: 500;
+          line-height: 1.55;
+        }
+
+        /* Error */
+        .ls-error {
+          display: flex;
+          align-items: flex-start;
+          gap: 10px;
+          margin-bottom: 20px;
+          padding: 12px 15px;
+          border-radius: var(--radius-sm);
+          background: rgba(225,29,72,.06);
+          border: 1px solid rgba(225,29,72,.18);
+          color: var(--red-dark);
+          font-size: 0.85rem;
+          font-weight: 600;
+          line-height: 1.45;
+        }
+
+        .ls-error svg { flex-shrink: 0; margin-top: 1px; }
+
+        /* Formulario */
+        .ls-form {
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+        }
+
+        .ls-field {
+          display: flex;
+          flex-direction: column;
+          gap: 7px;
+          color: var(--text-dark);
+          font-size: 0.74rem;
+          font-weight: 800;
+          letter-spacing: 0.06em;
+          text-transform: uppercase;
+        }
+
+        .ls-input-wrap {
           position: relative;
           display: flex;
           align-items: center;
-          color: #94a3b8;
         }
 
-        .input-wrap > svg {
+        .ls-input-icon {
           position: absolute;
           left: 15px;
+          color: #94a3b8;
           pointer-events: none;
+          z-index: 1;
         }
 
-        .input-wrap input {
+        .ls-input-wrap input {
           width: 100%;
-          height: 50px;
-          padding: 0 46px;
-          color: #0f172a;
-          background: #f8fafc;
-          border: 1px solid rgba(15, 23, 42, 0.09);
-          border-radius: 11px;
+          height: 52px;
+          padding: 0 48px;
+          background: #fff;
+          border: 1.5px solid var(--border);
+          border-radius: var(--radius-sm);
           outline: none;
-          font: inherit;
+          font-family: var(--font-outfit), system-ui, sans-serif;
           font-size: 0.95rem;
-          font-weight: 650;
+          font-weight: 500;
+          color: var(--text-dark);
           letter-spacing: 0;
           text-transform: none;
-          transition: border 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+          transition: border-color .2s, box-shadow .2s, background .2s;
         }
 
-        .input-wrap input:focus {
+        .ls-input-wrap input::placeholder { color: #94a3b8; }
+
+        .ls-input-wrap input:focus {
           background: #fff;
-          border-color: #e11d48;
-          box-shadow: 0 0 0 4px rgba(225, 29, 72, 0.12);
+          border-color: var(--red);
+          box-shadow: none;
         }
 
-        .ghost-icon {
+        .ls-input-wrap input:disabled {
+          opacity: .6;
+          cursor: not-allowed;
+        }
+
+        .ls-eye-btn {
           position: absolute;
-          right: 9px;
-          display: inline-flex;
+          right: 10px;
+          display: flex;
           align-items: center;
           justify-content: center;
           width: 34px;
           height: 34px;
-          color: #64748b;
+          color: #94a3b8;
           background: transparent;
           border: 0;
-          border-radius: 9px;
+          border-radius: 7px;
           cursor: pointer;
+          transition: color .15s, background .15s;
         }
 
-        .submit-button {
+        .ls-eye-btn:hover {
+          color: var(--text-dark);
+          background: rgba(15,23,42,.05);
+        }
+
+        /* Botón submit */
+        .ls-submit {
           display: inline-flex;
           align-items: center;
           justify-content: center;
           gap: 10px;
           width: 100%;
-          height: 52px;
-          margin-top: 8px;
+          height: 54px;
+          margin-top: 6px;
           color: #fff;
-          background: linear-gradient(135deg, #e11d48 0%, #b91c1c 100%);
+          background: linear-gradient(135deg, var(--red) 0%, #9f1239 100%);
           border: 0;
-          border-radius: 11px;
-          box-shadow: 0 14px 28px rgba(225, 29, 72, 0.25);
+          border-radius: var(--radius-sm);
+          box-shadow: 0 8px 24px rgba(225,29,72,.3), 0 1px 0 rgba(255,255,255,.12) inset;
           cursor: pointer;
+          font-family: var(--font-outfit), system-ui, sans-serif;
           font-size: 0.95rem;
-          font-weight: 900;
+          font-weight: 800;
+          letter-spacing: 0.01em;
+          transition: filter .2s, transform .15s, box-shadow .2s;
         }
 
-        .submit-button:disabled {
+        .ls-submit:hover:not(:disabled) {
+          filter: brightness(1.08);
+          transform: translateY(-2px);
+          box-shadow: 0 14px 32px rgba(225,29,72,.38), 0 1px 0 rgba(255,255,255,.12) inset;
+        }
+
+        .ls-submit:active:not(:disabled) {
+          transform: translateY(0);
+        }
+
+        .ls-submit:disabled {
+          opacity: .75;
           cursor: wait;
-          opacity: 0.76;
         }
 
-        @keyframes slideIn {
-          from {
-            opacity: 0;
-            transform: translateY(12px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
+        /* Spinner */
+        .ls-spinner {
+          width: 17px;
+          height: 17px;
+          border: 2.5px solid rgba(255,255,255,.3);
+          border-top-color: #fff;
+          border-radius: 50%;
+          animation: ls-spin .7s linear infinite;
         }
 
-        @media (max-width: 980px) {
-          .login-shell {
+        /* Footer note */
+        .ls-footer-note {
+          margin-top: 28px;
+          color: #94a3b8;
+          font-size: 0.78rem;
+          font-weight: 500;
+          line-height: 1.6;
+          text-align: center;
+          border-top: 1px solid var(--border);
+          padding-top: 22px;
+        }
+
+        /* Keyframes */
+        @keyframes ls-fade-up {
+          from { opacity: 0; transform: translateY(14px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes ls-spin {
+          to { transform: rotate(360deg); }
+        }
+
+        /* ── Mobile ── */
+        @media (max-width: 960px) {
+          .ls-root {
             grid-template-columns: 1fr;
-            padding: 14px;
           }
-
-          .hidden-mobile {
+          .ls-left {
             display: none;
           }
-
-          .mobile-brand {
+          .ls-mobile-brand {
             display: flex;
           }
-
-          .login-panel {
-            min-height: calc(100vh - 28px);
+          .ls-right {
+            min-height: 100dvh;
+            padding: 32px 24px;
           }
         }
 
-        @media (max-width: 520px) {
-          .login-shell {
-            padding: 0;
-            background: #f4f6f9;
+        @media (max-width: 480px) {
+          .ls-right {
+            padding: 24px 16px;
+            background: #fff;
           }
-
-          .login-panel {
-            min-height: 100vh;
-            padding: 18px;
-            border: 0;
-            border-radius: 0;
-          }
-
-          .login-card {
-            padding: 28px 22px;
-            border-radius: 16px;
+          .ls-form-wrap {
+            width: 100%;
           }
         }
       `}</style>

@@ -22,8 +22,44 @@ async function main() {
   await prisma.producto.deleteMany();
   await prisma.usuario.deleteMany();
   await prisma.sucursal.deleteMany();
+  await prisma.categoria.deleteMany();
+  await prisma.laboratorio.deleteMany();
 
   console.log("Base de datos limpia.");
+
+  // 1.5 Crear categorías por defecto
+  const defaultCategorias = [
+    { nombre: "Analgesicos", descripcion: "Medicamentos analgésicos para aliviar el dolor" },
+    { nombre: "Antibioticos", descripcion: "Antibióticos para combatir infecciones bacterianas" },
+    { nombre: "Antiinflamatorios", descripcion: "Medicamentos antiinflamatorios para reducir inflamación" },
+    { nombre: "Vitaminas", descripcion: "Suplementos vitamínicos y minerales" },
+    { nombre: "General", descripcion: "Otros medicamentos y productos generales" }
+  ];
+
+  for (const cat of defaultCategorias) {
+    await prisma.categoria.create({
+      data: cat
+    });
+  }
+  console.log("Categorías semilla creadas.");
+
+  // 1.8 Crear laboratorios por defecto
+  const genfar = await prisma.laboratorio.create({
+    data: { nombre: "Genfar", descripcion: "Laboratorio farmacéutico Genfar" }
+  });
+  const bago = await prisma.laboratorio.create({
+    data: { nombre: "Bago", descripcion: "Laboratorio farmacéutico Bagó" }
+  });
+  const albis = await prisma.laboratorio.create({
+    data: { nombre: "Albis", descripcion: "Distribuidora y laboratorio Albis" }
+  });
+  const portuguez = await prisma.laboratorio.create({
+    data: { nombre: "Portuguez", descripcion: "Laboratorio Portuguez" }
+  });
+  const hersil = await prisma.laboratorio.create({
+    data: { nombre: "Hersil", descripcion: "Laboratorio Hersil" }
+  });
+  console.log("Laboratorios semilla creados.");
 
   // 2. Crear sucursales de prueba (las 4 farmacias del usuario)
   const sucursal1 = await prisma.sucursal.create({
@@ -112,6 +148,7 @@ async function main() {
     data: {
       nombreProducto: "Paracetamol 500mg Genfar",
       tipoProducto: "Analgesicos",
+      laboratorioId: genfar.id,
       cantidadPresentacion: 100, // 100 unidades por caja
       cantidadPresentacionBlister: 10, // 10 unidades por blíster
     },
@@ -121,6 +158,7 @@ async function main() {
     data: {
       nombreProducto: "Amoxicilina 500mg - Portuguez",
       tipoProducto: "Antibioticos",
+      laboratorioId: portuguez.id,
       cantidadPresentacion: 50, // 50 unidades por caja
       cantidadPresentacionBlister: 10,
     },
@@ -130,6 +168,7 @@ async function main() {
     data: {
       nombreProducto: "Ibuprofeno 400mg - Bago",
       tipoProducto: "Antiinflamatorios",
+      laboratorioId: bago.id,
       cantidadPresentacion: 100,
       cantidadPresentacionBlister: 10,
     },

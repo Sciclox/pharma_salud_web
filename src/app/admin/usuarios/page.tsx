@@ -287,7 +287,7 @@ export default function AdminUsuarios() {
                       </span>
                     </td>
                     <td style={{ fontWeight: 600 }}>
-                      {u.rol === "Administrador" ? "🌍 Consolidado Global" : u.sucursal?.nombre}
+                      {u.rol === "Administrador" ? "Consolidado Global" : u.sucursal?.nombre}
                     </td>
                     <td>
                       <span className={`badge ${u.estado === "activo" ? "badge-success" : "badge-danger"}`}>

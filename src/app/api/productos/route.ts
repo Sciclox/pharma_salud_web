@@ -13,6 +13,7 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const search = searchParams.get("search") || "";
     const categoria = searchParams.get("categoria") || "";
+    const laboratorioId = searchParams.get("laboratorioId") || "";
 
     // Filtros de búsqueda acumulativos
     const whereClause: any = {};
@@ -31,12 +32,19 @@ export async function GET(request: Request) {
       };
     }
 
+    if (laboratorioId) {
+      whereClause.laboratorioId = {
+        equals: parseInt(laboratorioId),
+      };
+    }
+
     const productos = await prisma.producto.findMany({
       where: whereClause,
       orderBy: { nombreProducto: "asc" },
       // Incluir información de inventario por sucursal si se solicita
       include: {
         inventarios: true,
+        laboratorio: true,
       },
     });
 
@@ -62,6 +70,7 @@ export async function POST(request: Request) {
     const {
       nombreProducto,
       tipoProducto,
+      laboratorioId,
       cantidadPresentacion,
       cantidadPresentacionBlister,
     } = body;
@@ -77,8 +86,12 @@ export async function POST(request: Request) {
       data: {
         nombreProducto,
         tipoProducto,
+        laboratorioId: laboratorioId ? parseInt(laboratorioId) : null,
         cantidadPresentacion: cantidadPresentacion ? parseInt(cantidadPresentacion) : null,
         cantidadPresentacionBlister: cantidadPresentacionBlister ? parseInt(cantidadPresentacionBlister) : null,
+      },
+      include: {
+        laboratorio: true,
       },
     });
 
