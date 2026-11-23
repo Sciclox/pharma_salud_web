@@ -44,9 +44,75 @@ export async function PUT(
 
     const nuevaCantidad = cantidad !== undefined ? parseInt(cantidad) : item.cantidad;
 
+    // ── VALIDACIÓN DE STOCK EN TIEMPO REAL ───────────────────────────────────
+    if (nuevaCantidad > 0) {
+      const producto = await prisma.producto.findUnique({
+        where: { id: item.productoId },
+      });
+
+      if (!producto) {
+        return NextResponse.json({ error: "Producto no encontrado" }, { status: 404 });
+      }
+
+      const inventario = await prisma.inventarioSucursal.findUnique({
+        where: {
+          productoId_sucursalId: {
+            productoId: item.productoId,
+            sucursalId: item.sucursalId,
+          },
+        },
+      });
+
+      if (!inventario) {
+        return NextResponse.json({ error: "Inventario no encontrado para este producto." }, { status: 404 });
+      }
+
+      let factor = 1;
+      if (item.tipoVenta === "Venta por caja") {
+        factor = producto.cantidadPresentacion || 1;
+      } else if (item.tipoVenta === "Venta por blíster") {
+        factor = producto.cantidadPresentacionBlister || 1;
+      }
+
+      const otrosItems = await prisma.carritoVentas.findMany({
+        where: {
+          idUsuario: item.idUsuario,
+          sucursalId: item.sucursalId,
+          productoId: item.productoId,
+          NOT: { id: itemId },
+        },
+      });
+
+      const unidadesOtros = otrosItems.reduce((acc, current) => {
+        let f = 1;
+        if (current.tipoVenta === "Venta por caja") {
+          f = producto.cantidadPresentacion || 1;
+        } else if (current.tipoVenta === "Venta por blíster") {
+          f = producto.cantidadPresentacionBlister || 1;
+        }
+        return acc + current.cantidad * f;
+      }, 0);
+
+      const totalUnidadesRequeridas = unidadesOtros + nuevaCantidad * factor;
+
+      if (totalUnidadesRequeridas > inventario.cantidadTotal) {
+        const disponibles = Math.max(0, inventario.cantidadTotal - unidadesOtros);
+        let maximoFormateado = `${disponibles} unidades`;
+        if (item.tipoVenta === "Venta por caja") {
+          maximoFormateado = `${Math.floor(disponibles / factor)} cajas`;
+        } else if (item.tipoVenta === "Venta por blíster") {
+          maximoFormateado = `${Math.floor(disponibles / factor)} blísteres`;
+        }
+        return NextResponse.json(
+          { error: `Stock insuficiente. Solo quedan ${maximoFormateado} disponibles.` },
+          { status: 400 }
+        );
+      }
+    }
+
     if (nuevaCantidad <= 0) {
-      // Si la cantidad se reduce a 0 o menos, borrar el item
-      await prisma.carritoVentas.delete({
+      // Usar deleteMany para evitar error si el item ya fue eliminado
+      await prisma.carritoVentas.deleteMany({
         where: { id: itemId },
       });
       return NextResponse.json({ message: "Item eliminado del carrito" });
@@ -96,10 +162,7 @@ export async function DELETE(
     });
 
     if (!item) {
-      return NextResponse.json(
-        { error: "Item del carrito no encontrado" },
-        { status: 404 }
-      );
+      return NextResponse.json({ message: "El item ya no existe en el carrito" });
     }
 
     // Validar propiedad del item

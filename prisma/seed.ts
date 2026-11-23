@@ -18,12 +18,26 @@ async function main() {
   await prisma.carritoVentas.deleteMany();
   await prisma.detalleVenta.deleteMany();
   await prisma.registroVentas.deleteMany();
+
+  // Eliminar tablas dependientes de productos antes de borrar productos
+  await prisma.detalleOrdenCompra.deleteMany();
+  await prisma.ordenCompra.deleteMany();
+  await prisma.detalleIngreso.deleteMany();
+  await prisma.ingresoMercaderia.deleteMany();
+  await prisma.detalleTransferencia.deleteMany();
+  await prisma.transferencia.deleteMany();
+  await prisma.proveedor.deleteMany();
+  await prisma.productoCompuesto.deleteMany();
+  
   await prisma.inventarioSucursal.deleteMany();
   await prisma.producto.deleteMany();
+  await prisma.registroVentas.deleteMany();
+  await prisma.metodoPago.deleteMany();
   await prisma.usuario.deleteMany();
   await prisma.sucursal.deleteMany();
   await prisma.categoria.deleteMany();
   await prisma.laboratorio.deleteMany();
+  await prisma.unidadMedida.deleteMany();
 
   console.log("Base de datos limpia.");
 
@@ -60,6 +74,33 @@ async function main() {
     data: { nombre: "Hersil", descripcion: "Laboratorio Hersil" }
   });
   console.log("Laboratorios semilla creados.");
+
+  // 1.9 Crear unidades de medida por defecto
+  const defaultUnidades = [
+    { nombre: "mg" },
+    { nombre: "ml" },
+    { nombre: "g" },
+    { nombre: "mcg" },
+    { nombre: "UI" },
+    { nombre: "%" },
+    { nombre: "mg/ml" },
+    { nombre: "g/ml" },
+    { nombre: "mEq" },
+    { nombre: "U" }
+  ];
+  for (const uni of defaultUnidades) {
+    await prisma.unidadMedida.create({
+      data: uni
+    });
+  }
+  console.log("Unidades de medida semilla creadas.");
+
+  // 1.10 Crear métodos de pago por defecto
+  const metodosPago = ["efectivo", "yape", "transferencia"];
+  for (const mp of metodosPago) {
+    await prisma.metodoPago.create({ data: { nombre: mp } });
+  }
+  console.log("Métodos de pago semilla creados.");
 
   // 2. Crear sucursales de prueba (las 4 farmacias del usuario)
   const sucursal1 = await prisma.sucursal.create({
@@ -144,33 +185,53 @@ async function main() {
   console.log(`- Vendedora 2: vendedora2 / vendedor123 (${sucursal2.nombre})`);
 
   // 5. Crear algunos productos semilla de catálogo
+  const analgesicos = await prisma.categoria.findFirst({ where: { nombre: "Analgesicos" } });
+  const antibioticos = await prisma.categoria.findFirst({ where: { nombre: "Antibioticos" } });
+  const antiinflamatorios = await prisma.categoria.findFirst({ where: { nombre: "Antiinflamatorios" } });
+
+  const tabletaForma = await prisma.formaFarmaceutica.create({
+    data: { nombre: "Tableta" }
+  });
+
   const producto1 = await prisma.producto.create({
     data: {
-      nombreProducto: "Paracetamol 500mg Genfar",
-      tipoProducto: "Analgesicos",
+      nombreComercial: "Paracetamol",
+      nombreGenerico: "Paracetamol",
+      concentracion: "500 mg",
+      formaFarmaceuticaId: tabletaForma.id,
+      presentacion: "Caja",
       laboratorioId: genfar.id,
-      cantidadPresentacion: 100, // 100 unidades por caja
-      cantidadPresentacionBlister: 10, // 10 unidades por blíster
+      cantidadPresentacion: 100,
+      cantidadPresentacionBlister: 10,
+      categorias: { connect: { id: analgesicos!.id } },
     },
   });
 
   const producto2 = await prisma.producto.create({
     data: {
-      nombreProducto: "Amoxicilina 500mg - Portuguez",
-      tipoProducto: "Antibioticos",
+      nombreComercial: "Amoxicilina",
+      nombreGenerico: "Amoxicilina",
+      concentracion: "500 mg",
+      formaFarmaceuticaId: tabletaForma.id,
+      presentacion: "Caja",
       laboratorioId: portuguez.id,
-      cantidadPresentacion: 50, // 50 unidades por caja
+      cantidadPresentacion: 50,
       cantidadPresentacionBlister: 10,
+      categorias: { connect: { id: antibioticos!.id } },
     },
   });
 
   const producto3 = await prisma.producto.create({
     data: {
-      nombreProducto: "Ibuprofeno 400mg - Bago",
-      tipoProducto: "Antiinflamatorios",
+      nombreComercial: "Ibuprofeno",
+      nombreGenerico: "Ibuprofeno",
+      concentracion: "400 mg",
+      formaFarmaceuticaId: tabletaForma.id,
+      presentacion: "Caja",
       laboratorioId: bago.id,
       cantidadPresentacion: 100,
       cantidadPresentacionBlister: 10,
+      categorias: { connect: { id: antiinflamatorios!.id } },
     },
   });
 
@@ -185,8 +246,8 @@ async function main() {
       cantidadTotal: 500, // unidades físicas totales
       precioCaja: 20.0,
       precioUnidad: 0.25,
-      costoCaja: 12.0,
-      costoUnidad: 0.12,
+      precioBlister: 2.5,
+      costo: 12.0,
       stockMinimo: 100,
     },
   });
@@ -198,8 +259,8 @@ async function main() {
       cantidadTotal: 300,
       precioCaja: 35.0,
       precioUnidad: 0.8,
-      costoCaja: 22.0,
-      costoUnidad: 0.44,
+      precioBlister: 0,
+      costo: 22.0,
       stockMinimo: 50,
     },
   });
@@ -212,8 +273,8 @@ async function main() {
       cantidadTotal: 150, // Menos stock
       precioCaja: 22.0, // Precio más alto
       precioUnidad: 0.3,
-      costoCaja: 12.0,
-      costoUnidad: 0.12,
+      precioBlister: 2.5,
+      costo: 12.0,
       stockMinimo: 50,
     },
   });

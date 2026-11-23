@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
+import { getFullProductName } from "@/lib/productos";
 
 // GET /api/inventarios - Obtener inventario de una sucursal (?sucursalId=X)
 export async function GET(request: Request) {
@@ -47,21 +48,44 @@ export async function GET(request: Request) {
       include: {
         producto: {
           select: {
-            nombreProducto: true,
-            categoriaId: true,
+            nombreComercial: true,
+            nombreGenerico: true,
+            concentracion: true,
+            presentacion: true,
+            sku: true,
+            codigoBarras: true,
             cantidadPresentacion: true,
             cantidadPresentacionBlister: true,
+            contenidoNetoValor: true,
+            contenidoNetoUnidad: true,
+            categorias: { select: { nombre: true } },
+            formaFarmaceuticaRel: { select: { nombre: true } },
+            laboratorio: { select: { nombre: true } },
+            compuestos: {
+              select: {
+                concentracion: true,
+                compuesto: { select: { nombre: true } },
+              },
+            },
           },
         },
       },
       orderBy: {
         producto: {
-          nombreProducto: "asc",
+          nombreComercial: "asc",
         },
       },
     });
 
-    return NextResponse.json(inventario);
+    const mappedInventario = inventario.map(item => ({
+      ...item,
+      producto: {
+        ...item.producto,
+        nombreProducto: getFullProductName(item.producto)
+      }
+    }));
+
+    return NextResponse.json(mappedInventario);
   } catch (error) {
     console.error("Error al obtener inventario de sucursal:", error);
     return NextResponse.json(
@@ -86,8 +110,8 @@ export async function PUT(request: Request) {
       cantidadTotal,
       precioCaja,
       precioUnidad,
-      costoCaja,
-      costoUnidad,
+      precioBlister,
+      costo,
       stockMinimo,
     } = body;
 
@@ -108,8 +132,8 @@ export async function PUT(request: Request) {
       const updateData = {
         precioCaja: precioCaja !== undefined ? parseFloat(precioCaja) : undefined,
         precioUnidad: precioUnidad !== undefined ? parseFloat(precioUnidad) : undefined,
-        costoCaja: costoCaja !== undefined ? parseFloat(costoCaja) : undefined,
-        costoUnidad: costoUnidad !== undefined ? parseFloat(costoUnidad) : undefined,
+        precioBlister: precioBlister !== undefined ? parseFloat(precioBlister) : undefined,
+        costo: costo !== undefined ? parseFloat(costo) : undefined,
         stockMinimo: stockMinimo !== undefined ? parseInt(stockMinimo) : undefined,
         // cantidadTotal se omite intencionalmente en modo global para no sobreescribir stock individual
       };
@@ -125,8 +149,8 @@ export async function PUT(request: Request) {
             cantidadTotal: 0,
             precioCaja: precioCaja !== undefined ? parseFloat(precioCaja) : 0,
             precioUnidad: precioUnidad !== undefined ? parseFloat(precioUnidad) : 0,
-            costoCaja: costoCaja !== undefined ? parseFloat(costoCaja) : 0,
-            costoUnidad: costoUnidad !== undefined ? parseFloat(costoUnidad) : 0,
+            precioBlister: precioBlister !== undefined ? parseFloat(precioBlister) : 0,
+            costo: costo !== undefined ? parseFloat(costo) : 0,
             stockMinimo: stockMinimo !== undefined ? parseInt(stockMinimo) : 0,
           },
         })
@@ -148,8 +172,8 @@ export async function PUT(request: Request) {
         cantidadTotal: cantidadTotal !== undefined ? parseInt(cantidadTotal) : undefined,
         precioCaja: precioCaja !== undefined ? parseFloat(precioCaja) : undefined,
         precioUnidad: precioUnidad !== undefined ? parseFloat(precioUnidad) : undefined,
-        costoCaja: costoCaja !== undefined ? parseFloat(costoCaja) : undefined,
-        costoUnidad: costoUnidad !== undefined ? parseFloat(costoUnidad) : undefined,
+        precioBlister: precioBlister !== undefined ? parseFloat(precioBlister) : undefined,
+        costo: costo !== undefined ? parseFloat(costo) : undefined,
         stockMinimo: stockMinimo !== undefined ? parseInt(stockMinimo) : undefined,
       },
       create: {
@@ -158,8 +182,8 @@ export async function PUT(request: Request) {
         cantidadTotal: cantidadTotal !== undefined ? parseInt(cantidadTotal) : 0,
         precioCaja: precioCaja !== undefined ? parseFloat(precioCaja) : 0,
         precioUnidad: precioUnidad !== undefined ? parseFloat(precioUnidad) : 0,
-        costoCaja: costoCaja !== undefined ? parseFloat(costoCaja) : 0,
-        costoUnidad: costoUnidad !== undefined ? parseFloat(costoUnidad) : 0,
+        precioBlister: precioBlister !== undefined ? parseFloat(precioBlister) : 0,
+        costo: costo !== undefined ? parseFloat(costo) : 0,
         stockMinimo: stockMinimo !== undefined ? parseInt(stockMinimo) : 0,
       },
     });

@@ -33,7 +33,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { nombre, direccion } = body;
+    const { nombre, direccion, afiliada } = body;
 
     if (!nombre) {
       return NextResponse.json(
@@ -58,6 +58,7 @@ export async function POST(request: Request) {
       data: {
         nombre,
         direccion,
+        afiliada,
         estado: "activo",
       },
     });

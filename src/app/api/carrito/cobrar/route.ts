@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
+import { getFullProductName } from "@/lib/productos";
+import { calcularStockMinimoIndividual } from "@/lib/stock";
 
 export async function POST(request: Request) {
   try {
@@ -13,7 +15,7 @@ export async function POST(request: Request) {
     const sucursalId = session.user.sucursalId;
 
     const body = await request.json();
-    const { pagoCon, vuelto } = body;
+    const { pagoCon, vuelto, metodoPago, referenciaPago, pendiente } = body;
 
     if (pagoCon === undefined || vuelto === undefined) {
       return NextResponse.json(
@@ -24,6 +26,11 @@ export async function POST(request: Request) {
 
     const pagoConNum = parseFloat(pagoCon);
     const vueltoNum = parseFloat(vuelto);
+    const metodoNombre = metodoPago || "efectivo";
+    const esPendiente = pendiente === true;
+
+    // Buscar el MetodoPago por nombre para usar FK
+    const metodoPagoRecord = await prisma.metodoPago.findUnique({ where: { nombre: metodoNombre } });
 
     // Ejecutar todo el proceso dentro de una transacción atómica de base de datos
     const resultado = await prisma.$transaction(async (tx) => {
@@ -31,7 +38,11 @@ export async function POST(request: Request) {
       const carritoItems = await tx.carritoVentas.findMany({
         where: { idUsuario, sucursalId },
         include: {
-          producto: true,
+          producto: {
+            include: {
+              laboratorio: true,
+            },
+          },
         },
       });
 
@@ -53,6 +64,9 @@ export async function POST(request: Request) {
           total: totalVenta,
           pagoCon: pagoConNum,
           vuelto: vueltoNum,
+          metodoPagoId: metodoPagoRecord?.id || null,
+          referenciaPago: metodoNombre !== "efectivo" ? (referenciaPago || null) : null,
+          estado: esPendiente ? "pendiente" : "completado",
         },
       });
 
@@ -73,104 +87,112 @@ export async function POST(request: Request) {
           unidadesARestar = item.cantidad * 1;
         }
 
-        // Consultar stock en la sucursal actual
-        const inventario = await tx.inventarioSucursal.findUnique({
-          where: {
-            productoId_sucursalId: {
+        if (esPendiente) {
+          // Crear únicamente el detalle, sin descontar stock
+          await tx.detalleVenta.create({
+            data: {
+              registroVentaId: ventaHeader.id,
               productoId: item.productoId,
-              sucursalId,
+              nombreProducto: getFullProductName(prod),
+              tipoVenta: item.tipoVenta,
+              cantidad: item.cantidad,
+              precioVenta: item.precioVenta,
+              devolucion: "No",
             },
-          },
-        });
-
-        if (!inventario) {
-          throw new Error(`El producto ${prod.nombreProducto} no tiene inventario asignado en esta sucursal`);
-        }
-
-        if (inventario.cantidadTotal < unidadesARestar) {
-          throw new Error(`Stock insuficiente para ${prod.nombreProducto}. Disponible: ${inventario.cantidadTotal} unidades, Solicitado: ${unidadesARestar} unidades`);
-        }
-
-        // Descontar del stock global en la sucursal
-        await tx.inventarioSucursal.update({
-          where: {
-            productoId_sucursalId: {
-              productoId: item.productoId,
-              sucursalId,
-            },
-          },
-          data: {
-            cantidadTotal: {
-              decrement: unidadesARestar,
-            },
-          },
-        });
-
-        // FIFO: Descontar de las fechas de vencimiento (lotes) de la sucursal
-        let remanenteADescontar = unidadesARestar;
-        
-        const lotes = await tx.expiracionLote.findMany({
-          where: {
-            productoId: item.productoId,
-            sucursalId,
-          },
-          orderBy: {
-            fechaVencimiento: "asc", // FIFO: el que vence primero se descuenta antes
-          },
-        });
-
-        for (const lote of lotes) {
-          if (remanenteADescontar <= 0) break;
-
-          if (lote.cantidad <= remanenteADescontar) {
-            // Se agota este lote completo, se elimina
-            remanenteADescontar -= lote.cantidad;
-            await tx.expiracionLote.delete({
-              where: { id: lote.id },
-            });
-          } else {
-            // Descontar parcialmente de este lote
-            await tx.expiracionLote.update({
-              where: { id: lote.id },
-              data: {
-                cantidad: {
-                  decrement: remanenteADescontar,
-                },
+          });
+        } else {
+          // Consultar stock en la sucursal actual
+          const inventario = await tx.inventarioSucursal.findUnique({
+            where: {
+              productoId_sucursalId: {
+                productoId: item.productoId,
+                sucursalId,
               },
-            });
-            remanenteADescontar = 0;
+            },
+          });
+
+          if (!inventario) {
+            throw new Error(`El producto ${getFullProductName(prod)} no tiene inventario asignado en esta sucursal`);
           }
+
+          if (inventario.cantidadTotal < unidadesARestar) {
+            throw new Error(`Stock insuficiente para ${getFullProductName(prod)}. Disponible: ${inventario.cantidadTotal} unidades, Solicitado: ${unidadesARestar} unidades`);
+          }
+
+          // Descontar del stock global en la sucursal
+          await tx.inventarioSucursal.update({
+            where: {
+              productoId_sucursalId: {
+                productoId: item.productoId,
+                sucursalId,
+              },
+            },
+            data: {
+              cantidadTotal: {
+                decrement: unidadesARestar,
+              },
+            },
+          });
+
+          // FIFO: Descontar de las fechas de vencimiento (lotes) de la sucursal
+          let remanenteADescontar = unidadesARestar;
+          
+          const lotes = await tx.expiracionLote.findMany({
+            where: {
+              productoId: item.productoId,
+              sucursalId,
+            },
+            orderBy: {
+              fechaVencimiento: "asc",
+            },
+          });
+
+          for (const lote of lotes) {
+            if (remanenteADescontar <= 0) break;
+
+            if (lote.cantidad <= remanenteADescontar) {
+              remanenteADescontar -= lote.cantidad;
+              await tx.expiracionLote.delete({
+                where: { id: lote.id },
+              });
+            } else {
+              await tx.expiracionLote.update({
+                where: { id: lote.id },
+                data: {
+                  cantidad: {
+                    decrement: remanenteADescontar,
+                  },
+                },
+              });
+              remanenteADescontar = 0;
+            }
+          }
+
+          // Crear el detalle de la venta
+          const detalle = await tx.detalleVenta.create({
+            data: {
+              registroVentaId: ventaHeader.id,
+              productoId: item.productoId,
+              nombreProducto: getFullProductName(prod),
+              tipoVenta: item.tipoVenta,
+              cantidad: item.cantidad,
+              precioVenta: item.precioVenta,
+              devolucion: "No",
+            },
+          });
+
+          // Crear registro en Kardex
+          await tx.kardex.create({
+            data: {
+              sucursalId,
+              productoId: item.productoId,
+              nombreProducto: getFullProductName(prod),
+              tipoMovimiento: item.tipoVenta,
+              cantidad: -unidadesARestar,
+              idDetalleVenta: detalle.id,
+            },
+          });
         }
-
-        // Nota: Si el remanente es mayor que 0 significa que se vendieron unidades que
-        // no tenían lote cargado. En farmacia esto puede pasar por descuadres,
-        // no lanzamos error pero asumimos que el stock físico se restó correctamente de inventario.
-
-        // Crear el detalle de la venta (detalles_venta)
-        const detalle = await tx.detalleVenta.create({
-          data: {
-            registroVentaId: ventaHeader.id,
-            productoId: item.productoId,
-            nombreProducto: prod.nombreProducto,
-            usuarioId: idUsuario,
-            tipoVenta: item.tipoVenta,
-            cantidad: item.cantidad,
-            precioVenta: item.precioVenta,
-            devolucion: "No",
-          },
-        });
-
-        // Crear registro en Kardex (Auditoría de inventario)
-        await tx.kardex.create({
-          data: {
-            sucursalId,
-            productoId: item.productoId,
-            nombreProducto: prod.nombreProducto,
-            tipoMovimiento: item.tipoVenta, // "Venta por unidad/caja/blíster"
-            cantidad: -unidadesARestar, // Se guarda en negativo porque es una salida
-            idDetalleVenta: detalle.id,
-          },
-        });
       }
 
       // 5. Limpiar el carrito del vendedor
@@ -183,12 +205,26 @@ export async function POST(request: Request) {
         total: totalVenta,
         pagoCon: pagoConNum,
         vuelto: vueltoNum,
+        metodoPago: metodoNombre,
+        referenciaPago: metodoNombre !== "efectivo" ? (referenciaPago || null) : null,
+        estado: esPendiente ? "pendiente" : "completado",
+        productosIds: carritoItems.map(item => item.productoId),
       };
     });
 
+    // Recalcular stock mínimo automáticamente para los productos vendidos
+    try {
+      const promesas = resultado.productosIds.map((pId: number) =>
+        calcularStockMinimoIndividual(pId, sucursalId)
+      );
+      await Promise.all(promesas);
+    } catch (recalcError) {
+      console.error("Error al recalcular automáticamente stock mínimo post-venta:", recalcError);
+    }
+
     return NextResponse.json({
       success: true,
-      message: "Venta procesada correctamente",
+      message: esPendiente ? "Venta registrada, pendiente de pago" : "Venta procesada correctamente",
       ...resultado,
     });
   } catch (error: any) {

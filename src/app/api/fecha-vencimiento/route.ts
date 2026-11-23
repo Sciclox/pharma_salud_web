@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
+import { getFullProductName } from "@/lib/productos";
 
 // GET /api/fecha-vencimiento - Listar lotes de vencimiento con filtros
 export async function GET(request: Request) {
@@ -58,8 +59,13 @@ export async function GET(request: Request) {
       include: {
         producto: {
           select: {
-            nombreProducto: true,
-            tipoProducto: true,
+            nombreComercial: true,
+            nombreGenerico: true,
+            concentracion: true,
+            presentacion: true,
+            cantidadPresentacion: true,
+            categorias: { select: { nombre: true } },
+            laboratorio: { select: { nombre: true } },
           },
         },
         sucursal: {
@@ -69,7 +75,15 @@ export async function GET(request: Request) {
       orderBy: { fechaVencimiento: "asc" }, // Los que vencen antes van primero
     });
 
-    return NextResponse.json(lotes);
+    const mappedLotes = lotes.map(lote => ({
+      ...lote,
+      producto: {
+        ...lote.producto,
+        nombreProducto: getFullProductName(lote.producto)
+      }
+    }));
+
+    return NextResponse.json(mappedLotes);
   } catch (error) {
     console.error("Error al obtener vencimientos:", error);
     return NextResponse.json(
@@ -148,8 +162,7 @@ export async function POST(request: Request) {
         cantidadTotal: cant,
         precioCaja: 0,
         precioUnidad: 0,
-        costoCaja: 0,
-        costoUnidad: 0,
+        costo: 0,
         stockMinimo: 0,
       },
     });

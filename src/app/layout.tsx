@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Outfit } from "next/font/google";
 import "./globals.css";
+import AlertProvider from "@/components/AlertProvider";
 
 const outfit = Outfit({
   subsets: ["latin"],
@@ -26,6 +27,7 @@ export default function RootLayout({
     <html lang="es" className={`h-full antialiased ${outfit.variable}`}>
       <body className="min-h-full flex flex-col bg-background text-foreground transition-colors duration-300">
         {children}
+        <AlertProvider />
       </body>
     </html>
   );

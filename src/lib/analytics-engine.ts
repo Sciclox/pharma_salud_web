@@ -1,9 +1,10 @@
 import prisma from "@/lib/prisma";
+import { getFullProductName } from "@/lib/productos";
 
 export interface AnalisisProducto {
   id: number;
   nombreProducto: string;
-  tipoProducto: string | null;
+  categoriaNombre: string | null;
   stockUtil: number;
   stockUtilTxt: string;
   totalVendidas: number;
@@ -32,6 +33,8 @@ export async function analizarInventarioSucursal(sucursalId: number): Promise<An
       fechasVencimiento: {
         where: { sucursalId },
       },
+      categorias: true,
+      laboratorio: true,
     },
   });
 
@@ -41,17 +44,22 @@ export async function analizarInventarioSucursal(sucursalId: number): Promise<An
 
   const detallesVenta = await prisma.detalleVenta.findMany({
     where: {
-      fecha: { gte: doceSemanasAtras },
+      devolucion: "No", // Excluir devoluciones
       registroVenta: {
         sucursalId,
+        fecha: { gte: doceSemanasAtras },
       },
-      devolucion: "No", // Excluir devoluciones
     },
     include: {
       producto: {
         select: {
           cantidadPresentacion: true,
           cantidadPresentacionBlister: true,
+        },
+      },
+      registroVenta: {
+        select: {
+          fecha: true,
         },
       },
     },
@@ -108,7 +116,7 @@ export async function analizarInventarioSucursal(sucursalId: number): Promise<An
       totalUnidadesVendidas += unidades;
 
       // Ubicar en qué balde semanal cae (0 es la más reciente, 11 la más antigua)
-      const diffMs = hoy.getTime() - new Date(det.fecha).getTime();
+      const diffMs = hoy.getTime() - new Date(det.registroVenta.fecha).getTime();
       const semIndex = Math.floor(diffMs / unaSemanaMs);
       if (semIndex >= 0 && semIndex < 12) {
         ventasSemanales[semIndex] += unidades;
@@ -189,10 +197,10 @@ export async function analizarInventarioSucursal(sucursalId: number): Promise<An
 
     // J. Margen de Ganancia
     const precioUnidad = inv.precioUnidad;
-    const costoUnidad = inv.costoUnidad;
+    const costo = inv.costo;
     let margenPorcentaje = 0;
-    if (precioUnidad > 0 && costoUnidad > 0) {
-      margenPorcentaje = Math.round(((precioUnidad - costoUnidad) / precioUnidad) * 100);
+    if (precioUnidad > 0 && costo > 0) {
+      margenPorcentaje = Math.round(((precioUnidad - costo) / precioUnidad) * 100);
     }
 
     // K. Es un Top Venta
@@ -201,8 +209,8 @@ export async function analizarInventarioSucursal(sucursalId: number): Promise<An
 
     analizados.push({
       id: prod.id,
-      nombreProducto: prod.nombreProducto,
-      tipoProducto: prod.tipoProducto,
+      nombreProducto: getFullProductName(prod),
+      categoriaNombre: prod.categorias?.[0]?.nombre ?? null,
       stockUtil,
       stockUtilTxt,
       totalVendidas: totalUnidadesVendidas,

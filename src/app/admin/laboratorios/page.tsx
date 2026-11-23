@@ -2,6 +2,9 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Search, Plus, Edit2, Trash2, X, Building, Store } from "lucide-react";
+import { useEscapeToClose } from "@/hooks/useEscapeToClose";
+import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
+import CustomSelect from "@/components/CustomSelect";
 
 interface Laboratory {
   id: number;
@@ -19,6 +22,9 @@ export default function AdminLaboratorios() {
   // Modales/Drawers
   const [showAddModal, setShowAddModal] = useState<boolean>(false);
   const [selectedLaboratory, setSelectedLaboratory] = useState<Laboratory | null>(null);
+  useEscapeToClose(showAddModal, useCallback(() => setShowAddModal(false), []));
+  useEscapeToClose(!!selectedLaboratory, useCallback(() => setSelectedLaboratory(null), []));
+  useBodyScrollLock(showAddModal || !!selectedLaboratory);
 
   // Formulario de creación
   const [nuevoNombre, setNuevoNombre] = useState<string>( "");
@@ -51,12 +57,13 @@ export default function AdminLaboratorios() {
     fetchLaboratorios();
   }, [fetchLaboratorios]);
 
-  // Atajo de teclado Ctrl + K para enfocar el buscador
+  // Atajo de teclado F1 para enfocar el buscador
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+      if (e.key === "F1") {
         e.preventDefault();
         searchInputRef.current?.focus();
+        searchInputRef.current?.select();
       }
     };
     window.addEventListener("keydown", handleKeyDown);
@@ -135,7 +142,8 @@ export default function AdminLaboratorios() {
 
   // Eliminar laboratorio
   const handleDeleteLaboratory = async (id: number, nombre: string) => {
-    if (!confirm(`¿Está seguro de eliminar el laboratorio "${nombre}"? Esta acción no se puede deshacer.`)) {
+    const confirmed = await (window as any).showConfirm(`¿Está seguro de eliminar el laboratorio "${nombre}"? Esta acción no se puede deshacer.`);
+    if (!confirmed) {
       return;
     }
 
@@ -145,10 +153,11 @@ export default function AdminLaboratorios() {
       });
 
       if (res.ok) {
+        alert("Laboratorio eliminado correctamente.");
         fetchLaboratorios();
       } else {
         const errData = await res.json();
-        alert(`Error al eliminar: ${errData.error}`);
+        alert(errData.error || "Error al eliminar laboratorio");
       }
     } catch (error) {
       console.error("Error al eliminar laboratorio:", error);
@@ -190,7 +199,7 @@ export default function AdminLaboratorios() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
-            <div className="admin-search-shortcut-badge">Ctrl K</div>
+            <div className="admin-search-shortcut-badge">F1</div>
             {searchQuery && (
               <button className="admin-search-clear-btn" onClick={() => setSearchQuery("")}>
                 <X size={15} strokeWidth={2.5} />
@@ -277,7 +286,7 @@ export default function AdminLaboratorios() {
 
         {/* DRAWER: NUEVO LABORATORIO */}
         {showAddModal && (
-          <div className="admin-drawer-overlay" onClick={() => setShowAddModal(false)}>
+          <div className="admin-drawer-overlay overlay-bg-blur">
             <div className="admin-drawer-card" onClick={(e) => e.stopPropagation()}>
               <button onClick={() => setShowAddModal(false)} className="admin-modal-close-btn">
                 <X size={18} strokeWidth={2.5} />
@@ -324,7 +333,7 @@ export default function AdminLaboratorios() {
 
         {/* DRAWER: EDITAR LABORATORIO */}
         {selectedLaboratory && (
-          <div className="admin-drawer-overlay" onClick={() => setSelectedLaboratory(null)}>
+          <div className="admin-drawer-overlay overlay-bg-blur">
             <div className="admin-drawer-card" onClick={(e) => e.stopPropagation()}>
               <button onClick={() => setSelectedLaboratory(null)} className="admin-modal-close-btn">
                 <X size={18} strokeWidth={2.5} />
@@ -356,14 +365,11 @@ export default function AdminLaboratorios() {
 
                 <div className="form-group">
                   <label className="form-label">Estado:</label>
-                  <select
-                    className="input-field"
+                  <CustomSelect
+                    options={[{value:"activo", label:"Activa"}, {value:"inactivo", label:"Inactiva"}]}
                     value={editEstado}
-                    onChange={(e) => setEditEstado(e.target.value)}
-                  >
-                    <option value="activo">Activo</option>
-                    <option value="inactivo">Inactivo</option>
-                  </select>
+                    onChange={setEditEstado}
+                  />
                 </div>
               </div>
 
@@ -443,21 +449,23 @@ export default function AdminLaboratorios() {
 
         .admin-search-input {
           width: 100%;
-          padding: 12px 16px 12px 48px;
-          border-radius: 8px;
-          border: 1.5px solid rgba(15, 23, 42, 0.08);
-          background: rgba(15, 23, 42, 0.01);
-          color: #0f172a;
-          font-size: 0.88rem;
-          font-weight: 600;
+          height: 48px;
+          padding: 0 16px 0 48px;
+          border-radius: var(--radius-sm);
+          border: 1px solid rgba(0, 0, 0, 0.08);
+          background: rgba(255, 255, 255, 0.8);
+          color: hsl(var(--foreground));
+          font-family: var(--font-body), sans-serif;
+          font-size: 0.95rem;
+          font-weight: 500;
           outline: none;
-          transition: all 0.2s ease;
+          transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
         .admin-search-input:focus {
           background: #ffffff;
-          border-color: #e11d48;
-          box-shadow: 0 0 0 4px rgba(225, 29, 72, 0.08);
+          border-color: hsl(var(--primary));
+          border-width: 2px;
         }
 
         .admin-search-shortcut-badge {
@@ -508,7 +516,7 @@ export default function AdminLaboratorios() {
         }
 
         .admin-table th {
-          background: rgba(15, 23, 42, 0.02);
+          background: #f8fafc;
           padding: 14px 24px;
           font-size: 0.72rem;
           font-weight: 800;
@@ -521,7 +529,7 @@ export default function AdminLaboratorios() {
         .admin-table td {
           padding: 16px 24px;
           border-bottom: 1.5px solid rgba(15, 23, 42, 0.05);
-          font-size: 0.9rem;
+          font-size: 0.85rem;
           vertical-align: middle;
         }
 
@@ -530,7 +538,7 @@ export default function AdminLaboratorios() {
         }
 
         .admin-table tr:hover td {
-          background: rgba(15, 23, 42, 0.005);
+          background: rgba(225, 29, 72, 0.05);
         }
 
         .admin-prod-cell {
@@ -540,20 +548,20 @@ export default function AdminLaboratorios() {
         }
 
         .admin-prod-name {
-          font-weight: 750;
+          font-weight: 400;
           color: #0f172a;
         }
 
         .admin-prod-meta {
           font-size: 0.74rem;
           color: #94a3b8;
-          font-weight: 600;
+          font-weight: 400;
         }
 
         .admin-badge {
           display: inline-block;
           font-size: 0.72rem;
-          font-weight: 800;
+          font-weight: 400;
           padding: 4px 10px;
           border-radius: 8px;
           letter-spacing: 0.02em;
@@ -680,8 +688,6 @@ export default function AdminLaboratorios() {
         .admin-drawer-overlay {
           position: fixed;
           inset: 0;
-          background: rgba(15, 23, 42, 0.4);
-          backdrop-filter: blur(4px);
           z-index: 100;
           display: flex;
           justify-content: flex-end;
@@ -746,24 +752,6 @@ export default function AdminLaboratorios() {
           color: #475569;
           text-transform: uppercase;
           letter-spacing: 0.02em;
-        }
-
-        .input-field {
-          padding: 11px 14px;
-          border-radius: 8px;
-          border: 1.5px solid rgba(15, 23, 42, 0.08);
-          font-size: 0.88rem;
-          font-weight: 600;
-          color: #0f172a;
-          outline: none;
-          background: rgba(15, 23, 42, 0.005);
-          transition: all 0.15s ease;
-        }
-
-        .input-field:focus {
-          background: #ffffff;
-          border-color: #e11d48;
-          box-shadow: 0 0 0 4px rgba(225, 29, 72, 0.08);
         }
 
         @keyframes fadeIn {

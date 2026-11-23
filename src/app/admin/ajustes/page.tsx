@@ -1,9 +1,12 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import { Search, Scale, FileText, CheckCircle2, AlertTriangle, Store, X } from "lucide-react";
 import { formatMoney } from "@/lib/format";
 import jsPDF from "jspdf";
+import CustomSelect from "@/components/CustomSelect";
+import SucursalSelector from "@/components/SucursalSelector";
 
 interface InventarioItem {
   id: number;
@@ -12,11 +15,10 @@ interface InventarioItem {
   cantidadTotal: number; // Stock actual del sistema en unidades
   precioCaja: number;
   precioUnidad: number;
-  costoCaja: number;
-  costoUnidad: number;
+  costo: number;
   producto: {
     nombreProducto: string;
-    tipoProducto: string | null;
+    categorias?: { nombre: string }[];
     cantidadPresentacion: number | null;
   };
 }
@@ -27,8 +29,9 @@ interface Sucursal {
 }
 
 export default function AdminAjustes() {
+  const searchParams = useSearchParams();
+  const sucursalSeleccionada = searchParams.get("sucursalId") || "1";
   const [sucursales, setSucursales] = useState<Sucursal[]>([]);
-  const [sucursalSeleccionada, setSucursalSeleccionada] = useState<string>("1");
   const [inventario, setInventario] = useState<InventarioItem[]>([]);
   const [productosFiltrados, setProductosFiltrados] = useState<InventarioItem[]>([]);
   
@@ -40,6 +43,7 @@ export default function AdminAjustes() {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(true);
   const [ajustando, setAjustando] = useState<boolean>(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Cargar sucursales
   const fetchSucursales = useCallback(async () => {
@@ -83,6 +87,18 @@ export default function AdminAjustes() {
     fetchInventario();
   }, [fetchSucursales, fetchInventario]);
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "F1") {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+        searchInputRef.current?.select();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
   // Búsqueda en tiempo real
   useEffect(() => {
     if (!searchQuery) {
@@ -91,7 +107,7 @@ export default function AdminAjustes() {
       const query = searchQuery.toLowerCase();
       const filtered = inventario.filter(item => 
         item.producto.nombreProducto.toLowerCase().includes(query) ||
-        (item.producto.tipoProducto && item.producto.tipoProducto.toLowerCase().includes(query))
+        (item.producto.categorias?.[0]?.nombre && item.producto.categorias[0].nombre.toLowerCase().includes(query))
       );
       setProductosFiltrados(filtered);
     }
@@ -115,7 +131,7 @@ export default function AdminAjustes() {
   // Calcular valor monetario de la discrepancia (basado en costo unitario)
   const getValorDiscrepancia = (item: InventarioItem) => {
     const diff = getDiscrepancia(item);
-    const costo = item.costoUnidad || 0.1;
+    const costo = item.costo || 0.1;
     return diff * costo;
   };
 
@@ -147,7 +163,8 @@ export default function AdminAjustes() {
       return;
     }
 
-    if (!confirm(`¿Está seguro de aplicar ajustes de stock para ${ajustes.length} medicamentos? Se actualizará el inventario físico de la sucursal, se crearán los registros de auditoría en Kardex y se registrará un balance de S/ ${getBalanceTotal().toFixed(2)} en la caja.`)) {
+    const confirmed = await (window as any).showConfirm(`¿Está seguro de aplicar ajustes de stock para ${ajustes.length} medicamentos? Se actualizará el inventario físico de la sucursal, se crearán los registros de auditoría en Kardex y se registrará un balance de S/ ${getBalanceTotal().toFixed(2)} en la caja.`);
+    if (!confirmed) {
       return;
     }
 
@@ -257,22 +274,7 @@ export default function AdminAjustes() {
         }}
       >
         <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-            <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "hsl(var(--muted-foreground))" }}>
-              Farmacia a auditar:
-            </span>
-            <select
-              className="input-field"
-              value={sucursalSeleccionada}
-              onChange={(e) => setSucursalSeleccionada(e.target.value)}
-              style={{ width: "220px", height: "42px", padding: "8px 12px" }}
-              disabled={ajustando}
-            >
-              {sucursales.map(s => (
-                <option key={s.id} value={s.id.toString()}>{s.nombre}</option>
-              ))}
-            </select>
-          </div>
+          <SucursalSelector />
         </div>
 
         {/* Balance Económico */}
@@ -294,7 +296,7 @@ export default function AdminAjustes() {
           <span 
             style={{ 
               fontSize: "1.3rem", 
-              fontWeight: 800, 
+              fontWeight: 600, 
               color: getBalanceTotal() >= 0 ? "hsl(var(--success))" : "hsl(var(--danger))" 
             }}
           >
@@ -316,12 +318,13 @@ export default function AdminAjustes() {
       {/* 2. BÚSQUEDA RAPIDA */}
       <div style={{ position: "relative" }}>
         <input
+          ref={searchInputRef}
           type="text"
           className="input-field"
           placeholder="Buscar medicamentos en stock para arqueo físico..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          style={{ paddingLeft: "46px" }}
+          style={{ paddingLeft: "46px", paddingRight: "60px" }}
           disabled={ajustando}
         />
         <Search 
@@ -334,6 +337,24 @@ export default function AdminAjustes() {
             color: "hsl(var(--muted-foreground))" 
           }} 
         />
+        <div 
+          style={{
+            position: "absolute",
+            right: "16px",
+            top: "50%",
+            transform: "translateY(-50%)",
+            background: "rgba(15, 23, 42, 0.05)",
+            color: "#64748b",
+            fontSize: "0.68rem",
+            fontWeight: 600,
+            padding: "4px 8px",
+            borderRadius: "6px",
+            pointerEvents: "none",
+            userSelect: "none"
+          }}
+        >
+          F1
+        </div>
       </div>
 
       {/* 3. TABLA DE AJUSTES */}
@@ -368,11 +389,11 @@ export default function AdminAjustes() {
                   
                   return (
                     <tr key={item.id}>
-                      <td style={{ fontWeight: 700 }}>{item.producto.nombreProducto}</td>
+                      <td style={{ fontWeight: 400 }}>{item.producto.nombreProducto}</td>
                       <td>
-                        <span className="badge badge-info">{item.producto.tipoProducto || "General"}</span>
+                        <span className="badge badge-info">{item.producto.categorias?.[0]?.nombre || "General"}</span>
                       </td>
-                      <td style={{ fontWeight: 600 }}>{item.cantidadTotal} und</td>
+                      <td style={{ fontWeight: 400 }}>{item.cantidadTotal} und</td>
                       <td>
                         <input
                           type="number"

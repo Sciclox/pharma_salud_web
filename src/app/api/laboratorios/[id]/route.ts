@@ -106,6 +106,19 @@ export async function DELETE(
       );
     }
 
+    const productosAsociados = await prisma.producto.count({
+      where: { laboratorioId },
+    });
+
+    if (productosAsociados > 0) {
+      return NextResponse.json(
+        {
+          error: `No se puede eliminar el laboratorio porque tiene ${productosAsociados} producto(s) asociado(s). Cambia el laboratorio de esos productos primero.`,
+        },
+        { status: 409 }
+      );
+    }
+
     await prisma.laboratorio.delete({
       where: { id: laboratorioId },
     });

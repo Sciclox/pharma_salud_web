@@ -1,10 +1,8 @@
 import { auth, signOut } from "@/auth";
 import { redirect } from "next/navigation";
 import { 
-  User,
   LogOut
 } from "lucide-react";
-import SucursalSelector from "@/components/SucursalSelector";
 import SidebarNav from "@/components/SidebarNav";
 import LogoFarmacia from "@/components/LogoFarmacia";
 
@@ -14,6 +12,10 @@ export default async function AdminLayout({
   children: React.ReactNode;
 }) {
   const session = await auth();
+
+  if (session?.error === "SessionExpired") {
+    redirect("/api/auth/logout");
+  }
 
   // Redirigir a login si no está autenticado o no es Administrador
   if (!session || session.user.role !== "Administrador") {
@@ -50,10 +52,10 @@ export default async function AdminLayout({
         >
           <LogoFarmacia size={36} glow={false} />
           <div style={{ display: "flex", flexDirection: "column" }}>
-            <span style={{ fontWeight: 900, fontSize: "1.1rem", letterSpacing: "-0.02em", color: "hsl(var(--foreground))" }}>
+            <span style={{ fontWeight: 700, fontSize: "1.1rem", letterSpacing: "-0.02em", color: "hsl(var(--foreground))" }}>
               PHARMA SALUD
             </span>
-            <span style={{ fontSize: "0.72rem", color: "hsl(var(--muted-foreground))", fontWeight: 800, letterSpacing: "0.02em" }}>
+            <span style={{ fontSize: "0.72rem", color: "hsl(var(--muted-foreground))", fontWeight: 600, letterSpacing: "0.02em" }}>
               ADMINISTRACIÓN
             </span>
           </div>
@@ -73,25 +75,11 @@ export default async function AdminLayout({
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <div 
-              style={{
-                width: "36px",
-                height: "36px",
-                borderRadius: "50%",
-                background: "hsl(var(--primary) / 0.1)",
-                color: "hsl(var(--primary))",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <User size={18} />
-            </div>
-            <div style={{ display: "flex", flexDirection: "column" }}>
+            <div style={{ display: "flex", flexDirection: "column", borderLeft: "3px solid #e11d48", paddingLeft: "12px" }}>
               <span style={{ fontWeight: 700, fontSize: "0.9rem", maxWidth: "140px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                 {nombre}
               </span>
-              <span style={{ fontSize: "0.75rem", color: "hsl(var(--muted-foreground))", fontWeight: 600 }}>
+              <span style={{ fontSize: "0.75rem", color: "hsl(var(--muted-foreground))", fontWeight: 500 }}>
                 Administrador
               </span>
             </div>
@@ -125,33 +113,8 @@ export default async function AdminLayout({
 
       {/* ÁREA DE CONTENIDO */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: "100vh", overflowX: "hidden" }}>
-        {/* Cabecera del Contenido (Filtro de Sucursal) */}
-        <header 
-          style={{
-            height: "76px",
-            background: "hsl(var(--card) / 0.7)",
-            backdropFilter: "blur(16px)",
-            WebkitBackdropFilter: "blur(16px)",
-            borderBottom: "1px solid hsl(var(--card-border))",
-            padding: "0 32px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            position: "sticky",
-            top: 0,
-            zIndex: 30,
-          }}
-        >
-          <h2 style={{ fontSize: "1.25rem", fontWeight: 800, letterSpacing: "-0.03em" }}>
-            Consola Centralizada
-          </h2>
-
-          {/* Selector de Sucursal Multi-Tenant */}
-          <SucursalSelector />
-        </header>
-
         {/* Cuerpo del Contenido */}
-        <main style={{ flex: 1, padding: "36px 32px", overflowY: "auto" }} className="fade-in">
+        <main style={{ flex: 1, padding: "24px 32px", overflowY: "auto" }} className="fade-in">
           {children}
         </main>
       </div>

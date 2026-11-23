@@ -1,7 +1,10 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import { Search, DollarSign, Store, User, Calendar, X, AlertTriangle, ArrowRight } from "lucide-react";
+import CustomSelect from "@/components/CustomSelect";
+import SucursalSelector from "@/components/SucursalSelector";
 import { formatMoney } from "@/lib/format";
 
 interface Sobrante {
@@ -30,13 +33,14 @@ interface Personal {
 }
 
 export default function AdminSobrantes() {
+  const searchParams = useSearchParams();
+  const sucursalFiltro = searchParams.get("sucursalId") || "todos";
   const [sobrantes, setSobrantes] = useState<Sobrante[]>([]);
   const [sobrantesFiltrados, setSobrantesFiltrados] = useState<Sobrante[]>([]);
   const [sucursales, setSucursales] = useState<Sucursal[]>([]);
   const [vendedores, setVendedores] = useState<Personal[]>([]);
   
   // Filtros
-  const [sucursalFiltro, setSucursalFiltro] = useState<string>("todos");
   const [vendedorFiltro, setVendedorFiltro] = useState<string>("todos");
   const [fechaInicio, setFechaInicio] = useState<string>("");
   const [fechaFin, setFechaFin] = useState<string>("");
@@ -86,17 +90,23 @@ export default function AdminSobrantes() {
 
   // Borrar arqueo erróneo (Solo Admin)
   const handleDeleteArqueo = async (id: number) => {
-    if (!confirm("¿Está seguro de eliminar este registro de arqueo de caja?")) {
+    const confirmed = await (window as any).showConfirm("¿Está seguro de eliminar este registro de arqueo de caja?");
+    if (!confirmed) {
       return;
     }
 
     try {
       const res = await fetch(`/api/sobrante-caja/${id}`, {
-        method: "DELETE", // Se puede implementar en backend si es crítico, o por ahora usar lógica simulada
+        method: "DELETE",
       });
 
-      // Recargar
-      fetchSobrantes();
+      if (res.ok) {
+        alert("Arqueo eliminado correctamente.");
+        fetchSobrantes();
+      } else {
+        const data = await res.json();
+        alert(data.error || "Error al eliminar arqueo");
+      }
     } catch (error) {
       console.error(error);
     }
@@ -125,35 +135,17 @@ export default function AdminSobrantes() {
       >
         <div style={{ display: "flex", flexWrap: "wrap", gap: "16px", flex: 1 }}>
           {/* Farmacia */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-            <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "hsl(var(--muted-foreground))" }}>Farmacia:</span>
-            <select
-              className="input-field"
-              value={sucursalFiltro}
-              onChange={(e) => setSucursalFiltro(e.target.value)}
-              style={{ width: "200px", height: "42px", padding: "8px 12px" }}
-            >
-              <option value="todos">Todas (Consolidado)</option>
-              {sucursales.map(s => (
-                <option key={s.id} value={s.id.toString()}>{s.nombre}</option>
-              ))}
-            </select>
-          </div>
+          <SucursalSelector />
 
           {/* Vendedor */}
           <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-            <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "hsl(var(--muted-foreground))" }}>Colaborador:</span>
-            <select
-              className="input-field"
+            <span style={{ fontSize: "0.8rem", fontWeight: 600, color: "hsl(var(--muted-foreground))" }}>Colaborador:</span>
+            <CustomSelect
+              options={[{value:"todos", label:"Todos"}, ...vendedores.map(v => ({value: v.id.toString(), label: v.nombreVendedor}))]}
               value={vendedorFiltro}
-              onChange={(e) => setVendedorFiltro(e.target.value)}
-              style={{ width: "180px", height: "42px", padding: "8px 12px" }}
-            >
-              <option value="todos">Todos</option>
-              {vendedores.map(v => (
-                <option key={v.id} value={v.id.toString()}>{v.nombreVendedor}</option>
-              ))}
-            </select>
+              onChange={setVendedorFiltro}
+              width="180px"
+            />
           </div>
 
           {/* Rango */}
@@ -199,7 +191,7 @@ export default function AdminSobrantes() {
           <span 
             style={{ 
               fontSize: "1.4rem", 
-              fontWeight: 800, 
+              fontWeight: 600, 
               color: getBalanceNeto() >= 0 ? "hsl(var(--success))" : "hsl(var(--danger))" 
             }}
           >
@@ -236,13 +228,13 @@ export default function AdminSobrantes() {
               ) : (
                 sobrantes.map((s) => (
                   <tr key={s.id}>
-                    <td style={{ fontWeight: 700 }}>#{s.id}</td>
+                    <td style={{ fontWeight: 400 }}>#{s.id}</td>
                     <td>{new Date(s.fecha).toLocaleString("es-PE")}</td>
-                    <td style={{ fontWeight: 600 }}>{s.sucursal.nombre}</td>
+                    <td style={{ fontWeight: 400 }}>{s.sucursal.nombre}</td>
                     <td>{s.usuario.nombreVendedor}</td>
                     <td 
                       style={{ 
-                        fontWeight: 800, 
+                        fontWeight: 400, 
                         color: s.monto >= 0 ? "hsl(var(--success))" : "hsl(var(--danger))" 
                       }}
                     >

@@ -105,7 +105,17 @@ async function migrate() {
         const tipoProducto = p.Tipo_Producto || "General";
         const cantidadPresentacion = p.Cantidad_Presentacion || 100;
         const cantidadPresentacionBlister = p.Cantidad_Presentacion_blister || 10;
-        
+
+        // Buscar categoría por nombre (crearla si no existe)
+        let categoria = await prisma.categoria.findFirst({
+          where: { nombre: { equals: tipoProducto, mode: "insensitive" } },
+        });
+        if (!categoria) {
+          categoria = await prisma.categoria.create({
+            data: { nombre: tipoProducto, descripcion: `Migrado desde sistema legacy: ${tipoProducto}` },
+          });
+        }
+
         const stockTotal = p.Cantidad_Total || 0;
         const precioCaja = p.Precio_Caja || 0;
         const precioUnidad = p.Precio_Unidad || 0;
@@ -118,14 +128,14 @@ async function migrate() {
           where: { id },
           update: {
             nombreProducto,
-            tipoProducto,
+            categoriaId: categoria.id,
             cantidadPresentacion,
             cantidadPresentacionBlister,
           },
           create: {
             id,
             nombreProducto,
-            tipoProducto,
+            categoriaId: categoria.id,
             cantidadPresentacion,
             cantidadPresentacionBlister,
           },

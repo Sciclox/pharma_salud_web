@@ -362,7 +362,7 @@ export default function LoginPage() {
           margin: 0;
           color: var(--text-inv);
           font-size: 1.05rem;
-          font-weight: 800;
+          font-weight: 700;
           letter-spacing: 0.04em;
           line-height: 1;
         }
@@ -371,7 +371,7 @@ export default function LoginPage() {
           margin-top: 5px;
           color: var(--text-muted-inv);
           font-size: 0.7rem;
-          font-weight: 600;
+          font-weight: 500;
           letter-spacing: 0.08em;
           text-transform: uppercase;
         }
@@ -396,7 +396,7 @@ export default function LoginPage() {
           border: 1px solid rgba(225,29,72,.25);
           color: #fb7185;
           font-size: 0.75rem;
-          font-weight: 700;
+          font-weight: 600;
           letter-spacing: 0.06em;
           text-transform: uppercase;
         }
@@ -409,7 +409,7 @@ export default function LoginPage() {
           margin: 0;
           color: var(--text-inv);
           font-size: clamp(2.2rem, 4vw, 3.8rem);
-          font-weight: 900;
+          font-weight: 700;
           line-height: 1.02;
           letter-spacing: -0.03em;
           text-shadow: 0 2px 30px rgba(0,0,0,.4);
@@ -419,7 +419,7 @@ export default function LoginPage() {
           margin-top: 16px;
           color: var(--text-muted-inv);
           font-size: 1rem;
-          font-weight: 500;
+          font-weight: 400;
           line-height: 1.65;
           max-width: 480px;
         }
@@ -443,7 +443,7 @@ export default function LoginPage() {
           border-bottom: 1px solid var(--border-inv);
           color: var(--text-muted-inv);
           font-size: 0.73rem;
-          font-weight: 700;
+          font-weight: 600;
           text-transform: uppercase;
           letter-spacing: 0.07em;
         }
@@ -454,7 +454,7 @@ export default function LoginPage() {
           gap: 7px;
           color: #34d399;
           font-size: 0.73rem;
-          font-weight: 700;
+          font-weight: 600;
         }
 
         .ls-status-dot span {
@@ -488,14 +488,14 @@ export default function LoginPage() {
 
         .ls-metric-tile strong {
           font-size: 1.9rem;
-          font-weight: 900;
+          font-weight: 700;
           line-height: 1;
           letter-spacing: -0.02em;
         }
 
         .ls-metric-tile small {
           font-size: 0.68rem;
-          font-weight: 700;
+          font-weight: 500;
           color: rgba(255,255,255,.7);
           letter-spacing: 0.06em;
           text-transform: uppercase;
@@ -519,7 +519,7 @@ export default function LoginPage() {
           border: 1px solid var(--border-inv);
           color: var(--text-inv);
           font-size: 0.85rem;
-          font-weight: 600;
+          font-weight: 500;
         }
 
         .ls-detail-row svg {
@@ -562,7 +562,7 @@ export default function LoginPage() {
           gap: 7px;
           color: var(--text-muted-inv);
           font-size: 0.72rem;
-          font-weight: 600;
+          font-weight: 500;
           letter-spacing: 0.04em;
         }
 
@@ -596,7 +596,7 @@ export default function LoginPage() {
         .ls-mobile-brand p {
           margin: 0;
           color: var(--text-dark);
-          font-weight: 900;
+          font-weight: 700;
           font-size: 1.05rem;
           letter-spacing: 0.04em;
           line-height: 1;
@@ -605,7 +605,7 @@ export default function LoginPage() {
         .ls-mobile-brand span {
           color: var(--text-muted);
           font-size: 0.7rem;
-          font-weight: 600;
+          font-weight: 500;
           text-transform: uppercase;
           letter-spacing: 0.06em;
         }
@@ -626,7 +626,7 @@ export default function LoginPage() {
           border: 1px solid rgba(225,29,72,.15);
           color: var(--red-dark);
           font-size: 0.72rem;
-          font-weight: 800;
+          font-weight: 600;
           letter-spacing: 0.06em;
           text-transform: uppercase;
         }
@@ -635,7 +635,7 @@ export default function LoginPage() {
           margin: 0 0 8px;
           color: var(--text-dark);
           font-size: 1.85rem;
-          font-weight: 900;
+          font-weight: 700;
           letter-spacing: -0.03em;
           line-height: 1.1;
         }
@@ -644,7 +644,7 @@ export default function LoginPage() {
           margin: 0;
           color: var(--text-muted);
           font-size: 0.92rem;
-          font-weight: 500;
+          font-weight: 400;
           line-height: 1.55;
         }
 
@@ -660,7 +660,7 @@ export default function LoginPage() {
           border: 1px solid rgba(225,29,72,.18);
           color: var(--red-dark);
           font-size: 0.85rem;
-          font-weight: 600;
+          font-weight: 500;
           line-height: 1.45;
         }
 
@@ -679,7 +679,7 @@ export default function LoginPage() {
           gap: 7px;
           color: var(--text-dark);
           font-size: 0.74rem;
-          font-weight: 800;
+          font-weight: 600;
           letter-spacing: 0.06em;
           text-transform: uppercase;
         }
@@ -708,7 +708,7 @@ export default function LoginPage() {
           outline: none;
           font-family: var(--font-outfit), system-ui, sans-serif;
           font-size: 0.95rem;
-          font-weight: 500;
+          font-weight: 400;
           color: var(--text-dark);
           letter-spacing: 0;
           text-transform: none;
@@ -766,7 +766,7 @@ export default function LoginPage() {
           cursor: pointer;
           font-family: var(--font-outfit), system-ui, sans-serif;
           font-size: 0.95rem;
-          font-weight: 800;
+          font-weight: 700;
           letter-spacing: 0.01em;
           transition: filter .2s, transform .15s, box-shadow .2s;
         }
@@ -801,7 +801,7 @@ export default function LoginPage() {
           margin-top: 28px;
           color: #94a3b8;
           font-size: 0.78rem;
-          font-weight: 500;
+          font-weight: 400;
           line-height: 1.6;
           text-align: center;
           border-top: 1px solid var(--border);

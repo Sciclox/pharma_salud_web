@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
+import { getFullProductName } from "@/lib/productos";
 
 // GET /api/kardex - Listar movimientos de Kardex con filtros
 export async function GET(request: Request) {
@@ -14,6 +15,8 @@ export async function GET(request: Request) {
     const search = searchParams.get("search") || ""; // buscar producto
     const tipoMovimiento = searchParams.get("tipoMovimiento") || "";
     const sucursalIdParam = searchParams.get("sucursalId");
+    const fechaInicio = searchParams.get("fechaInicio") || "";
+    const fechaFin = searchParams.get("fechaFin") || "";
 
     const whereClause: any = {};
 
@@ -39,7 +42,28 @@ export async function GET(request: Request) {
 
     // 3. Filtro por tipo de movimiento
     if (tipoMovimiento) {
-      whereClause.tipoMovimiento = tipoMovimiento;
+      if (tipoMovimiento.includes(",")) {
+        whereClause.tipoMovimiento = {
+          in: tipoMovimiento.split(",").map((t) => t.trim()),
+        };
+      } else {
+        whereClause.tipoMovimiento = tipoMovimiento;
+      }
+    }
+
+    // 4. Filtro por rango de fechas
+    if (fechaInicio || fechaFin) {
+      whereClause.fechaMovimiento = {};
+      if (fechaInicio) {
+        const inicio = new Date(fechaInicio);
+        inicio.setHours(0, 0, 0, 0);
+        whereClause.fechaMovimiento.gte = inicio;
+      }
+      if (fechaFin) {
+        const fin = new Date(fechaFin);
+        fin.setHours(23, 59, 59, 999);
+        whereClause.fechaMovimiento.lte = fin;
+      }
     }
 
     const movimientos = await prisma.kardex.findMany({
@@ -104,6 +128,7 @@ export async function POST(request: Request) {
       // 1. Obtener producto para registrar su nombre denormalizado
       const producto = await tx.producto.findUnique({
         where: { id: pId },
+        include: { laboratorio: true },
       });
 
       if (!producto) {
@@ -147,7 +172,7 @@ export async function POST(request: Request) {
         data: {
           sucursalId: sId,
           productoId: pId,
-          nombreProducto: producto.nombreProducto,
+          nombreProducto: getFullProductName(producto),
           tipoMovimiento,
           cantidad: incrementoStock,
         },

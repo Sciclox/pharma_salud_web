@@ -15,8 +15,13 @@ export async function GET(request: Request) {
     const fechaFinStr = searchParams.get("fechaFin");
     const usuarioIdParam = searchParams.get("usuarioId");
     const sucursalIdParam = searchParams.get("sucursalId");
+    const estadoParam = searchParams.get("estado");
 
     const whereClause: any = {};
+
+    if (estadoParam) {
+      whereClause.estado = estadoParam;
+    }
 
     // 1. Filtrar por sucursal según rol
     if (session.user.role === "Vendedor") {
@@ -71,18 +76,28 @@ export async function GET(request: Request) {
         sucursal: {
           select: { nombre: true },
         },
+        metodoPago: {
+          select: { nombre: true },
+        },
         detalles: {
           include: {
-            producto: {
-              select: { categoriaId: true },
-            },
+              producto: {
+                select: {
+                  categorias: { select: { nombre: true } },
+                },
+              },
           },
         },
       },
       orderBy: { fecha: "desc" },
     });
 
-    return NextResponse.json(ventas);
+    const ventasMapeadas = ventas.map(v => ({
+      ...v,
+      metodoPago: v.metodoPago?.nombre || null,
+    }));
+
+    return NextResponse.json(ventasMapeadas);
   } catch (error) {
     console.error("Error al obtener historial de ventas:", error);
     return NextResponse.json(

@@ -9,6 +9,10 @@ export default async function VendedorLayout({
 }) {
   const session = await auth();
 
+  if (session?.error === "SessionExpired") {
+    redirect("/api/auth/logout");
+  }
+
   // Redirigir a login si no hay sesión
   if (!session) {
     redirect("/login");

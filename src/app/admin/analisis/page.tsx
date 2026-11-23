@@ -4,11 +4,14 @@ import { useState, useEffect, useCallback } from "react";
 import { Search, TrendingUp, Package, AlertCircle, TrendingDown, RefreshCw, FileText, X, ArrowUpRight, BarChart3 } from "lucide-react";
 import { formatMoney, formatDias, formatAgotamiento } from "@/lib/format";
 import jsPDF from "jspdf";
+import CustomSelect from "@/components/CustomSelect";
+import { useEscapeToClose } from "@/hooks/useEscapeToClose";
+import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 
 interface AnalisisProducto {
   id: number;
   nombreProducto: string;
-  tipoProducto: string | null;
+  categoriaNombre: string | null;
   stockUtil: number;
   stockUtilTxt: string;
   totalVendidas: number;
@@ -39,6 +42,8 @@ export default function AdminAnalisis() {
 
   // Detalle de producto lateral
   const [selectedProduct, setSelectedProduct] = useState<AnalisisProducto | null>(null);
+  useEscapeToClose(!!selectedProduct, useCallback(() => setSelectedProduct(null), []));
+  useBodyScrollLock(!!selectedProduct);
 
   // Cargar sucursales
   const fetchSucursales = useCallback(async () => {
@@ -183,21 +188,17 @@ export default function AdminAnalisis() {
           }}
         >
           <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-            <h3 style={{ fontSize: "1.2rem", fontWeight: 800 }}>Previsión de Inventarios</h3>
+            <h3 style={{ fontSize: "1.2rem", fontWeight: 700 }}>Previsión de Inventarios</h3>
             <p style={{ fontSize: "0.85rem" }}>Analítica predictiva de velocidad de venta y volatilidad semanal.</p>
           </div>
 
           <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-            <select
-              className="input-field"
+            <CustomSelect
+              options={sucursales.map(s => ({ value: s.id.toString(), label: s.nombre }))}
               value={sucursalSeleccionada}
-              onChange={(e) => setSucursalSeleccionada(e.target.value)}
-              style={{ width: "220px", height: "42px" }}
-            >
-              {sucursales.map(s => (
-                <option key={s.id} value={s.id.toString()}>{s.nombre}</option>
-              ))}
-            </select>
+              onChange={setSucursalSeleccionada}
+              width="220px"
+            />
 
             <button className="btn btn-primary" onClick={handleExportPdf} style={{ display: "flex", gap: "8px" }}>
               <FileText size={16} />
@@ -331,7 +332,7 @@ export default function AdminAnalisis() {
 
                     return (
                       <tr key={p.id}>
-                        <td style={{ fontWeight: 700 }}>
+                        <td style={{ fontWeight: 400 }}>
                           {p.nombreProducto}
                           {p.esTopVenta && (
                             <span 
@@ -339,7 +340,7 @@ export default function AdminAnalisis() {
                                 background: "rgba(255, 51, 75, 0.1)", 
                                 color: "hsl(var(--primary))",
                                 fontSize: "0.65rem",
-                                fontWeight: 800,
+                                fontWeight: 400,
                                 padding: "2px 6px",
                                 borderRadius: "4px",
                                 marginLeft: "8px",
@@ -351,23 +352,23 @@ export default function AdminAnalisis() {
                           )}
                         </td>
                         {activeTab === "compras" && (
-                          <td style={{ fontWeight: 800, color: "hsl(var(--primary))" }}>
+                          <td style={{ fontWeight: 400, color: "hsl(var(--primary))" }}>
                             {p.compraSugeridaTxt}
                           </td>
                         )}
                         {activeTab === "top" && (
-                          <td style={{ fontWeight: 700 }}>{p.totalVendidas} und</td>
+                          <td style={{ fontWeight: 400 }}>{p.totalVendidas} und</td>
                         )}
                         {activeTab === "rentabilidad" && (
-                          <td style={{ fontWeight: 700, color: "hsl(var(--success))" }}>
+                          <td style={{ fontWeight: 400, color: "hsl(var(--success))" }}>
                             {p.margenPorcentaje}%
                           </td>
                         )}
-                        <td style={{ fontWeight: 600 }}>{p.stockUtilTxt}</td>
+                        <td style={{ fontWeight: 400 }}>{p.stockUtilTxt}</td>
                         <td>
                           <span className={`badge ${badgeClass}`}>{p.recomendacion}</span>
                         </td>
-                        <td style={{ fontWeight: 600 }}>{formatAgotamiento(p.diasRestantes)}</td>
+                        <td style={{ fontWeight: 400 }}>{formatAgotamiento(p.diasRestantes)}</td>
                         <td>
                           <button 
                             className="btn btn-outline"
@@ -393,11 +394,11 @@ export default function AdminAnalisis() {
 
       {/* PANEL LATERAL FLOTANTE (Right Sheet Detail) */}
       {selectedProduct && (
-        <div 
+        <div
+          className="overlay-bg-blur"
           style={{
             position: "fixed",
             inset: 0,
-            background: "rgba(0,0,0,0.4)",
             zIndex: 100,
             display: "flex",
             justifyContent: "end",
@@ -421,7 +422,7 @@ export default function AdminAnalisis() {
           >
             {/* Header del Panel */}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <h3 style={{ fontSize: "1.3rem", fontWeight: 800 }}>Análisis de Medicamento</h3>
+              <h3 style={{ fontSize: "1.3rem", fontWeight: 700 }}>Análisis de Medicamento</h3>
               <button 
                 onClick={() => setSelectedProduct(null)}
                 style={{ background: "none", border: "none", cursor: "pointer", color: "hsl(var(--muted-foreground))" }}
@@ -435,11 +436,11 @@ export default function AdminAnalisis() {
               <span style={{ fontSize: "0.8rem", color: "hsl(var(--muted-foreground))", fontWeight: 600, textTransform: "uppercase" }}>
                 Medicamento catalogado
               </span>
-              <h2 style={{ fontSize: "1.4rem", fontWeight: 800, marginTop: "4px", color: "hsl(var(--primary))" }}>
+              <h2 style={{ fontSize: "1.4rem", fontWeight: 700, marginTop: "4px", color: "hsl(var(--primary))" }}>
                 {selectedProduct.nombreProducto}
               </h2>
               <span className="badge badge-info" style={{ marginTop: "8px" }}>
-                {selectedProduct.tipoProducto || "General"}
+                {selectedProduct.categoriaNombre || "General"}
               </span>
             </div>
 
@@ -462,7 +463,7 @@ export default function AdminAnalisis() {
                   <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "hsl(var(--muted-foreground))" }}>
                     COMPRA SUGERIDA (MES):
                   </span>
-                  <span style={{ fontSize: "1.25rem", fontWeight: 800, color: "hsl(var(--primary))" }}>
+                  <span style={{ fontSize: "1.25rem", fontWeight: 600, color: "hsl(var(--primary))" }}>
                     {selectedProduct.compraSugeridaTxt}
                   </span>
                 </div>
@@ -478,19 +479,19 @@ export default function AdminAnalisis() {
               <div className="grid-2">
                 <div className="card" style={{ padding: "16px", display: "flex", flexDirection: "column", gap: "4px" }}>
                   <span style={{ fontSize: "0.75rem", color: "hsl(var(--muted-foreground))", fontWeight: 600 }}>Stock Útil</span>
-                  <span style={{ fontWeight: 800, fontSize: "1.1rem" }}>{selectedProduct.stockUtilTxt}</span>
+                  <span style={{ fontWeight: 600, fontSize: "1.1rem" }}>{selectedProduct.stockUtilTxt}</span>
                 </div>
                 <div className="card" style={{ padding: "16px", display: "flex", flexDirection: "column", gap: "4px" }}>
                   <span style={{ fontSize: "0.75rem", color: "hsl(var(--muted-foreground))", fontWeight: 600 }}>Proyección Stock</span>
-                  <span style={{ fontWeight: 800, fontSize: "1.1rem" }}>{formatAgotamiento(selectedProduct.diasRestantes)}</span>
+                  <span style={{ fontWeight: 600, fontSize: "1.1rem" }}>{formatAgotamiento(selectedProduct.diasRestantes)}</span>
                 </div>
                 <div className="card" style={{ padding: "16px", display: "flex", flexDirection: "column", gap: "4px" }}>
                   <span style={{ fontSize: "0.75rem", color: "hsl(var(--muted-foreground))", fontWeight: 600 }}>Vendidos (12 Sem)</span>
-                  <span style={{ fontWeight: 800, fontSize: "1.1rem" }}>{selectedProduct.totalVendidas} und</span>
+                  <span style={{ fontWeight: 600, fontSize: "1.1rem" }}>{selectedProduct.totalVendidas} und</span>
                 </div>
                 <div className="card" style={{ padding: "16px", display: "flex", flexDirection: "column", gap: "4px" }}>
                   <span style={{ fontSize: "0.75rem", color: "hsl(var(--muted-foreground))", fontWeight: 600 }}>Margen Ganancia</span>
-                  <span style={{ fontWeight: 800, fontSize: "1.1rem", color: "hsl(var(--success))" }}>{selectedProduct.margenPorcentaje}%</span>
+                  <span style={{ fontWeight: 600, fontSize: "1.1rem", color: "hsl(var(--success))" }}>{selectedProduct.margenPorcentaje}%</span>
                 </div>
               </div>
 
@@ -505,7 +506,7 @@ export default function AdminAnalisis() {
                   <span style={{ fontSize: "0.9rem", fontWeight: 600 }}>Comportamiento:</span>
                   <span 
                     style={{ 
-                      fontWeight: 800, 
+                      fontWeight: 600, 
                       color: selectedProduct.tendencia === "EN AUMENTO" ? "hsl(var(--success))" : "hsl(var(--muted-foreground))",
                       display: "flex",
                       alignItems: "center",

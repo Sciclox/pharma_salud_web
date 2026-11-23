@@ -1,8 +1,13 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import { Search, AlertTriangle, Calendar, Plus, Trash2, X, Store, CheckCircle2 } from "lucide-react";
+import CustomSelect from "@/components/CustomSelect";
+import SucursalSelector from "@/components/SucursalSelector";
 import { formatAgotamiento } from "@/lib/format";
+import { useEscapeToClose } from "@/hooks/useEscapeToClose";
+import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 
 interface Lote {
   id: number;
@@ -12,7 +17,7 @@ interface Lote {
   cantidad: number;
   producto: {
     nombreProducto: string;
-    tipoProducto: string | null;
+    categorias?: { nombre: string }[];
   };
   sucursal: {
     nombre: string;
@@ -30,16 +35,18 @@ interface Sucursal {
 }
 
 export default function AdminVencimientos() {
+  const searchParams = useSearchParams();
+  const sucursalSeleccionada = searchParams.get("sucursalId") || "todos";
   const [lotes, setLotes] = useState<Lote[]>([]);
   const [lotesFiltrados, setLotesFiltrados] = useState<Lote[]>([]);
   const [productos, setProductos] = useState<Product[]>([]);
   const [sucursales, setSucursales] = useState<Sucursal[]>([]);
   
   // Filtros
-  const [sucursalSeleccionada, setSucursalSeleccionada] = useState<string>("todos");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [activeTab, setActiveTab] = useState<string>("por-vencer"); // "vencidos" | "por-vencer" | "todos"
   const [loading, setLoading] = useState<boolean>(true);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Modal para agregar lote
   const [showAddLoteModal, setShowAddLoteModal] = useState<boolean>(false);
@@ -47,6 +54,8 @@ export default function AdminVencimientos() {
   const [sucursalLote, setSucursalLote] = useState<string>("1");
   const [fechaVencimiento, setFechaVencimiento] = useState<string>("");
   const [cantidadLote, setCantidadLote] = useState<string>("100");
+  useEscapeToClose(showAddLoteModal, useCallback(() => setShowAddLoteModal(false), []));
+  useBodyScrollLock(showAddLoteModal);
 
   // Cargar datos de soporte
   const fetchSoporte = useCallback(async () => {
@@ -90,6 +99,18 @@ export default function AdminVencimientos() {
     fetchSoporte();
     fetchLotes();
   }, [fetchSoporte, fetchLotes]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "F1") {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+        searchInputRef.current?.select();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   // Filtrado reactivo en el cliente
   const filterLotes = useCallback(() => {
@@ -158,7 +179,8 @@ export default function AdminVencimientos() {
 
   // Eliminar lote
   const handleDeleteLote = async (id: number) => {
-    if (!confirm("¿Está seguro de eliminar este lote de vencimiento? Se descontará automáticamente su stock correspondiente del stock general físico en la sucursal de origen para mantener consistencia.")) {
+    const confirmed = await (window as any).showConfirm("¿Está seguro de eliminar este lote de vencimiento? Se descontará automáticamente su stock correspondiente del stock general físico en la sucursal de origen para mantener consistencia.");
+    if (!confirmed) {
       return;
     }
 
@@ -168,9 +190,11 @@ export default function AdminVencimientos() {
       });
 
       if (res.ok) {
+        alert("Lote eliminado correctamente.");
         fetchLotes();
       } else {
-        alert("Error al eliminar lote");
+        const data = await res.json();
+        alert(data.error || "Error al eliminar lote");
       }
     } catch (error) {
       console.error(error);
@@ -193,23 +217,8 @@ export default function AdminVencimientos() {
           border: "1px solid hsl(var(--card-border))"
         }}
       >
-        <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-            <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "hsl(var(--muted-foreground))" }}>
-              Farmacia a consultar:
-            </span>
-            <select
-              className="input-field"
-              value={sucursalSeleccionada}
-              onChange={(e) => setSucursalSeleccionada(e.target.value)}
-              style={{ width: "220px", height: "42px", padding: "8px 12px" }}
-            >
-              <option value="todos">Todas las sucursales</option>
-              {sucursales.map(s => (
-                <option key={s.id} value={s.id.toString()}>{s.nombre}</option>
-              ))}
-            </select>
-          </div>
+          <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
+          <SucursalSelector />
         </div>
 
         <button className="btn btn-primary" onClick={() => setShowAddLoteModal(true)} style={{ padding: "10px 16px" }}>
@@ -274,12 +283,13 @@ export default function AdminVencimientos() {
       {/* 3. BÚSQUEDA RAPIDA */}
       <div style={{ position: "relative" }}>
         <input
+          ref={searchInputRef}
           type="text"
           className="input-field"
           placeholder="Buscar lote por medicamento o lote específico..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          style={{ paddingLeft: "46px" }}
+          style={{ paddingLeft: "46px", paddingRight: "60px" }}
         />
         <Search 
           size={18} 
@@ -291,6 +301,24 @@ export default function AdminVencimientos() {
             color: "hsl(var(--muted-foreground))" 
           }} 
         />
+        <div 
+          style={{
+            position: "absolute",
+            right: "16px",
+            top: "50%",
+            transform: "translateY(-50%)",
+            background: "rgba(15, 23, 42, 0.05)",
+            color: "#64748b",
+            fontSize: "0.68rem",
+            fontWeight: 600,
+            padding: "4px 8px",
+            borderRadius: "6px",
+            pointerEvents: "none",
+            userSelect: "none"
+          }}
+        >
+          F1
+        </div>
       </div>
 
       {/* 4. TABLA DE LOTES */}
@@ -336,11 +364,11 @@ export default function AdminVencimientos() {
 
                   return (
                     <tr key={lote.id}>
-                      <td style={{ fontWeight: 700 }}>{lote.producto.nombreProducto}</td>
-                      <td style={{ fontWeight: 600 }}>{lote.sucursal.nombre}</td>
-                      <td style={{ fontWeight: 600 }}>{vDate.toLocaleDateString("es-PE")}</td>
-                      <td style={{ fontWeight: 700 }}>{lote.cantidad} und</td>
-                      <td style={{ fontWeight: 600 }}>
+                      <td style={{ fontWeight: 400 }}>{lote.producto.nombreProducto}</td>
+                      <td style={{ fontWeight: 400 }}>{lote.sucursal.nombre}</td>
+                      <td style={{ fontWeight: 400 }}>{vDate.toLocaleDateString("es-PE")}</td>
+                      <td style={{ fontWeight: 400 }}>{lote.cantidad} und</td>
+                      <td style={{ fontWeight: 400 }}>
                         {estaVencido 
                           ? `Vencido hace ${formatAgotamiento(Math.abs(diffDays))}` 
                           : `Faltan ${formatAgotamiento(diffDays)}`}
@@ -368,11 +396,11 @@ export default function AdminVencimientos() {
 
       {/* MODAL: Ingresar Lote */}
       {showAddLoteModal && (
-        <div 
+        <div
+          className="overlay-bg-blur"
           style={{
             position: "fixed",
             inset: 0,
-            background: "rgba(0,0,0,0.5)",
             zIndex: 100,
             display: "flex",
             alignItems: "center",
@@ -393,29 +421,20 @@ export default function AdminVencimientos() {
 
             <div className="form-group">
               <label className="form-label">Medicamento:</label>
-              <select
-                className="input-field"
+              <CustomSelect
+                options={[{value:"", label:"Seleccione producto..."}, ...productos.map(p => ({value: p.id.toString(), label: p.nombreProducto}))]}
                 value={selectedProductId}
-                onChange={(e) => setSelectedProductId(e.target.value)}
-              >
-                <option value="">Seleccione producto...</option>
-                {productos.map(p => (
-                  <option key={p.id} value={p.id.toString()}>{p.nombreProducto}</option>
-                ))}
-              </select>
+                onChange={setSelectedProductId}
+              />
             </div>
 
             <div className="form-group">
               <label className="form-label">Farmacia Destino:</label>
-              <select
-                className="input-field"
+              <CustomSelect
+                options={sucursales.map(s => ({ value: s.id.toString(), label: s.nombre }))}
                 value={sucursalLote}
-                onChange={(e) => setSucursalLote(e.target.value)}
-              >
-                {sucursales.map(s => (
-                  <option key={s.id} value={s.id.toString()}>{s.nombre}</option>
-                ))}
-              </select>
+                onChange={setSucursalLote}
+              />
             </div>
 
             <div style={{ display: "flex", gap: "16px" }}>

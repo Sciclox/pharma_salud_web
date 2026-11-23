@@ -13,7 +13,13 @@ import {
   Coins,
   Store,
   Tags,
-  Building
+  Building,
+  Truck,
+  ClipboardList,
+  PackagePlus,
+  ArrowLeftRight,
+  Layers,
+  FlaskConical
 } from "lucide-react";
 
 interface BadgeConfig {
@@ -45,15 +51,23 @@ export default function SidebarNav() {
       items: [
         { label: "Dashboard Analítico", href: "/admin", icon: <LayoutDashboard size={18} /> },
         { 
-          label: "Catálogo Fármacos", 
+          label: "Inventario", 
           href: "/admin/productos", 
           icon: <Package size={18} />
         },
-        { label: "Categorías", href: "/admin/categorias", icon: <Tags size={18} /> },
-        { label: "Laboratorios", href: "/admin/laboratorios", icon: <Building size={18} /> },
         { label: "Libro Dispensación", href: "/admin/ventas", icon: <Receipt size={18} /> },
         { label: "Control de Personal", href: "/admin/usuarios", icon: <Users size={18} /> },
         { label: "Gestión de Sucursales", href: "/admin/sucursales", icon: <Store size={18} /> },
+      ]
+    },
+    {
+      title: "Clasificaciones & Catálogos",
+      items: [
+        { label: "Categorías", href: "/admin/categorias", icon: <Tags size={18} /> },
+        { label: "Laboratorios", href: "/admin/laboratorios", icon: <Building size={18} /> },
+        { label: "Formas Farmacéuticas", href: "/admin/formas-farmaceuticas", icon: <Layers size={18} /> },
+        { label: "Compuestos Químicos", href: "/admin/compuestos", icon: <FlaskConical size={18} /> },
+        { label: "Unidades de Medida", href: "/admin/unidades-medida", icon: <Scale size={18} /> },
       ]
     },
     {
@@ -66,7 +80,16 @@ export default function SidebarNav() {
           badge: { type: "danger", text: "3" }
         },
         { label: "Historial Kardex", href: "/admin/kardex", icon: <BookOpen size={18} /> },
+        { label: "Traspasos de Stock", href: "/admin/transferencias", icon: <ArrowLeftRight size={18} /> },
         { label: "Ajuste de Inventario", href: "/admin/ajustes", icon: <Scale size={18} /> },
+      ]
+    },
+    {
+      title: "Compras & Proveedores",
+      items: [
+        { label: "Proveedores", href: "/admin/proveedores", icon: <Truck size={18} /> },
+        { label: "Órdenes de Compra", href: "/admin/compras", icon: <ClipboardList size={18} /> },
+        { label: "Ingreso Mercadería", href: "/admin/ingresos", icon: <PackagePlus size={18} /> },
       ]
     },
     {

@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
+import { getFullProductName } from "@/lib/productos";
+import { calcularStockMinimoIndividual } from "@/lib/stock";
 
 // POST /api/ventas/[id]/devolucion - Marcar un detalle de venta como devuelto y reingresar stock
 export async function POST(
@@ -32,7 +34,11 @@ export async function POST(
         where: { id: detalleId },
         include: {
           registroVenta: true,
-          producto: true,
+          producto: {
+            include: {
+              laboratorio: true,
+            },
+          },
         },
       });
 
@@ -91,7 +97,7 @@ export async function POST(
         data: {
           sucursalId,
           productoId: detalle.productoId,
-          nombreProducto: prod.nombreProducto,
+          nombreProducto: getFullProductName(prod),
           tipoMovimiento: "Devuelto",
           cantidad: unidadesAReingresar, // Positivo por reingreso
           idDetalleVenta: detalle.id,
@@ -135,13 +141,24 @@ export async function POST(
         });
       }
 
-      return detalleActualizado;
+      return {
+        detalle: detalleActualizado,
+        productoId: detalle.productoId,
+        sucursalId,
+      };
     });
+
+    // Recalcular stock mínimo automáticamente para el producto devuelto
+    try {
+      await calcularStockMinimoIndividual(resultado.productoId, resultado.sucursalId);
+    } catch (recalcError) {
+      console.error("Error al recalcular automáticamente stock mínimo post-devolución:", recalcError);
+    }
 
     return NextResponse.json({
       success: true,
       message: "Devolución y reingreso de stock procesados correctamente",
-      detalle: resultado,
+      detalle: resultado.detalle,
     });
   } catch (error: any) {
     console.error("Error al procesar devolución:", error);

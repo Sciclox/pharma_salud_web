@@ -13,11 +13,14 @@ export const authConfig = {
 
       // Si es la ruta de login y está autenticado, redirigir al panel correspondiente
       if (isLoginRoute && isLoggedIn) {
-        const role = auth?.user?.role;
-        if (role === "Administrador") {
-          return Response.redirect(new URL("/admin", nextUrl));
-        } else {
-          return Response.redirect(new URL("/vendedor", nextUrl));
+        const hasError = nextUrl.searchParams.has("error") || nextUrl.searchParams.has("clear");
+        if (!hasError) {
+          const role = auth?.user?.role;
+          if (role === "Administrador") {
+            return Response.redirect(new URL("/admin", nextUrl));
+          } else {
+            return Response.redirect(new URL("/vendedor", nextUrl));
+          }
         }
       }
 

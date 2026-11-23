@@ -7,18 +7,23 @@ datasource db {
 }
 
 model Sucursal {
-  id                Int                  @id @default(autoincrement())
-  nombre            String               @unique
-  direccion         String?
-  estado            String               @default("activo")
-  fechaCreacion     DateTime             @default(now()) @map("fecha_creacion")
-  carritoItems      CarritoVentas[]
-  fechasVencimiento ExpiracionLote[]
-  inventarios       InventarioSucursal[]
-  kardex            Kardex[]
-  ventas            RegistroVentas[]
-  sobrantesCaja     SobranteCaja[]
-  usuarios          Usuario[]
+  id                     Int                  @id @default(autoincrement())
+  nombre                 String               @unique
+  direccion              String?
+  afiliada               String?
+  estado                 String               @default("activo")
+  fechaCreacion          DateTime             @default(now()) @map("fecha_creacion")
+  carritoItems           CarritoVentas[]
+  fechasVencimiento      ExpiracionLote[]
+  inventarios            InventarioSucursal[]
+  kardex                 Kardex[]
+  ventas                 RegistroVentas[]
+  sobrantesCaja          SobranteCaja[]
+  usuarios               Usuario[]
+  ordenesCompra          OrdenCompra[]
+  ingresos               IngresoMercaderia[]
+  transferenciasEnviadas Transferencia[]      @relation("sucursal_origen")
+  transferenciasRecibidas Transferencia[]     @relation("sucursal_destino")
 
   @@map("sucursal")
 }
@@ -33,9 +38,11 @@ model Usuario {
   genero         String?
   estado         String           @default("activo")
   carritoItems   CarritoVentas[]
-  detallesVenta  DetalleVenta[]
   ventas         RegistroVentas[]
   sobrantesCaja  SobranteCaja[]
+  ordenesCompra  OrdenCompra[]
+  ingresos       IngresoMercaderia[]
+  transferencias Transferencia[]
   sucursal       Sucursal?        @relation(fields: [sucursalId], references: [id])
 
   @@map("usuario")
@@ -43,19 +50,32 @@ model Usuario {
 
 model Producto {
   id                          Int                  @id @default(autoincrement())
-  nombreProducto              String               @map("nombre_producto")
+  nombreComercial             String?              @map("nombre_comercial")
+  nombreGenerico              String?              @map("nombre_generico")
+  concentracion               String?              @map("concentracion")
+  formaFarmaceuticaId         Int?                 @map("forma_farmaceutica_id")
+  presentacion                String?              @map("presentacion")
+  sku                         String?              @unique
+  codigoBarras                String?              @unique @map("codigo_barras")
   cantidadPresentacion        Int?                 @map("cantidad_presentacion")
   cantidadPresentacionBlister Int?                 @map("cantidad_presentacion_blister")
+  contenidoNetoValor          Float?               @map("contenido_neto_valor")
+  contenidoNetoUnidad         String?              @map("contenido_neto_unidad")
+  esGenerico                  Boolean              @default(false) @map("es_generico")
   fechaCreacion               DateTime             @default(now()) @map("fecha_creacion")
   laboratorioId               Int?                 @map("laboratorio_id")
-  categoriaId                 Int?                 @map("categoria_id")
   carritoItems                CarritoVentas[]
   detallesVenta               DetalleVenta[]
   fechasVencimiento           ExpiracionLote[]
   inventarios                 InventarioSucursal[]
   kardex                      Kardex[]
-  categoria                   Categoria?           @relation(fields: [categoriaId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  detalleOrdenCompra          DetalleOrdenCompra[]
+  detalleIngreso              DetalleIngreso[]
+  detallesTransferencia       DetalleTransferencia[]
+  categorias                  Categoria[]
+  formaFarmaceuticaRel        FormaFarmaceutica?   @relation(fields: [formaFarmaceuticaId], references: [id])
   laboratorio                 Laboratorio?         @relation(fields: [laboratorioId], references: [id])
+  compuestos                  ProductoCompuesto[]
 
   @@map("producto")
 }
@@ -67,8 +87,8 @@ model InventarioSucursal {
   cantidadTotal Int      @default(0) @map("cantidad_total")
   precioCaja    Float    @default(0) @map("precio_caja")
   precioUnidad  Float    @default(0) @map("precio_unidad")
-  costoCaja     Float    @default(0) @map("costo_caja")
-  costoUnidad   Float    @default(0) @map("costo_unidad")
+  precioBlister Float    @default(0) @map("precio_blister")
+  costo         Float    @default(0) @map("costo")
   stockMinimo   Int      @default(0) @map("stock_minimo")
   producto      Producto @relation(fields: [productoId], references: [id], onDelete: Cascade)
   sucursal      Sucursal @relation(fields: [sucursalId], references: [id], onDelete: Cascade)
@@ -77,17 +97,30 @@ model InventarioSucursal {
   @@map("inventario_sucursal")
 }
 
+model MetodoPago {
+  id     Int     @id @default(autoincrement())
+  nombre String  @unique
+  estado String  @default("activo")
+  ventas RegistroVentas[]
+
+  @@map("metodo_pago")
+}
+
 model RegistroVentas {
-  id         Int            @id @default(autoincrement())
-  sucursalId Int            @map("sucursal_id")
-  usuarioId  Int            @map("usuario_id")
-  fecha      DateTime       @default(now())
-  total      Float          @default(0)
-  pagoCon    Float          @default(0) @map("pago_con")
-  vuelto     Float          @default(0)
-  detalles   DetalleVenta[]
-  sucursal   Sucursal       @relation(fields: [sucursalId], references: [id])
-  usuario    Usuario        @relation(fields: [usuarioId], references: [id])
+  id             Int            @id @default(autoincrement())
+  sucursalId     Int            @map("sucursal_id")
+  usuarioId      Int            @map("usuario_id")
+  fecha          DateTime       @default(now())
+  total          Float          @default(0)
+  pagoCon        Float          @default(0) @map("pago_con")
+  vuelto         Float          @default(0)
+  metodoPagoId   Int?           @map("metodo_pago_id")
+  referenciaPago String?        @map("referencia_pago")
+  estado         String         @default("completado")
+  detalles       DetalleVenta[]
+  metodoPago     MetodoPago?    @relation(fields: [metodoPagoId], references: [id])
+  sucursal       Sucursal       @relation(fields: [sucursalId], references: [id])
+  usuario        Usuario        @relation(fields: [usuarioId], references: [id])
 
   @@map("registro_de_ventas")
 }
@@ -97,15 +130,12 @@ model DetalleVenta {
   registroVentaId Int            @map("registro_venta_id")
   productoId      Int            @map("producto_id")
   nombreProducto  String         @map("nombre_producto")
-  usuarioId       Int            @map("usuario_id")
-  fecha           DateTime       @default(now())
   tipoVenta       String         @map("tipo_venta")
   cantidad        Int
   precioVenta     Float          @map("precio_venta")
   devolucion      String         @default("No")
   producto        Producto       @relation(fields: [productoId], references: [id])
   registroVenta   RegistroVentas @relation(fields: [registroVentaId], references: [id], onDelete: Cascade)
-  usuario         Usuario        @relation(fields: [usuarioId], references: [id])
 
   @@map("detalles_venta")
 }
@@ -166,6 +196,82 @@ model SobranteCaja {
   @@map("sobrante_caja")
 }
 
+model Proveedor {
+  id            Int      @id @default(autoincrement())
+  nombre        String   @unique
+  ruc           String?  @unique
+  direccion     String?
+  telefono      String?
+  email         String?
+  contacto      String?
+  estado        String   @default("activo")
+  fechaCreacion DateTime @default(now()) @map("fecha_creacion")
+  ordenesCompra OrdenCompra[]
+
+  @@map("proveedor")
+}
+
+model OrdenCompra {
+  id            Int                    @id @default(autoincrement())
+  proveedorId   Int?                   @map("proveedor_id")
+  sucursalId    Int                    @map("sucursal_id")
+  usuarioId     Int                    @map("usuario_id")
+  fecha         DateTime               @default(now())
+  estado        String                 @default("pendiente")
+  total         Float                  @default(0)
+  observaciones String?
+  proveedor     Proveedor?             @relation(fields: [proveedorId], references: [id])
+  sucursal      Sucursal               @relation(fields: [sucursalId], references: [id])
+  usuario       Usuario                @relation(fields: [usuarioId], references: [id])
+  detalles      DetalleOrdenCompra[]
+  ingresos      IngresoMercaderia[]
+
+  @@map("orden_compra")
+}
+
+model DetalleOrdenCompra {
+  id             Int         @id @default(autoincrement())
+  ordenCompraId  Int         @map("orden_compra_id")
+  productoId     Int         @map("producto_id")
+  cantidad       Int
+  precioUnitario Float       @map("precio_unitario")
+  subtotal       Float
+  ordenCompra    OrdenCompra @relation(fields: [ordenCompraId], references: [id], onDelete: Cascade)
+  producto       Producto    @relation(fields: [productoId], references: [id])
+
+  @@map("detalle_orden_compra")
+}
+
+model IngresoMercaderia {
+  id            Int               @id @default(autoincrement())
+  ordenCompraId Int?              @map("orden_compra_id")
+  sucursalId    Int               @map("sucursal_id")
+  usuarioId     Int               @map("usuario_id")
+  fecha         DateTime          @default(now())
+  tipoIngreso   String            @default("directo") @map("tipo_ingreso")
+  observaciones String?
+  ordenCompra   OrdenCompra?      @relation(fields: [ordenCompraId], references: [id])
+  sucursal      Sucursal          @relation(fields: [sucursalId], references: [id])
+  usuario       Usuario           @relation(fields: [usuarioId], references: [id])
+  detalles      DetalleIngreso[]
+
+  @@map("ingreso_mercaderia")
+}
+
+model DetalleIngreso {
+  id               Int              @id @default(autoincrement())
+  ingresoId        Int              @map("ingreso_id")
+  productoId       Int              @map("producto_id")
+  cantidad         Int
+  precioUnitario   Float            @map("precio_unitario")
+  fechaVencimiento DateTime?        @map("fecha_vencimiento")
+  lote             String?
+  ingreso          IngresoMercaderia @relation(fields: [ingresoId], references: [id], onDelete: Cascade)
+  producto         Producto         @relation(fields: [productoId], references: [id])
+
+  @@map("detalle_ingreso")
+}
+
 model Categoria {
   id            Int        @id @default(autoincrement())
   nombre        String     @unique
@@ -186,4 +292,70 @@ model Laboratorio {
   productos     Producto[]
 
   @@map("laboratorio")
+}
+
+model Transferencia {
+  id                Int                    @id @default(autoincrement())
+  sucursalOrigenId  Int                    @map("sucursal_origen_id")
+  sucursalDestinoId Int                    @map("sucursal_destino_id")
+  usuarioId         Int                    @map("usuario_id")
+  fecha             DateTime               @default(now())
+  observaciones     String?
+  detalles          DetalleTransferencia[]
+  sucursalOrigen    Sucursal               @relation("sucursal_origen", fields: [sucursalOrigenId], references: [id])
+  sucursalDestino   Sucursal               @relation("sucursal_destino", fields: [sucursalDestinoId], references: [id])
+  usuario           Usuario                @relation(fields: [usuarioId], references: [id])
+
+  @@map("transferencia")
+}
+
+model DetalleTransferencia {
+  id              Int           @id @default(autoincrement())
+  transferenciaId Int           @map("transferencia_id")
+  productoId      Int           @map("producto_id")
+  cantidad        Int
+  lote            String?
+  fechaVencimiento DateTime?     @map("fecha_vencimiento")
+  transferencia   Transferencia @relation(fields: [transferenciaId], references: [id], onDelete: Cascade)
+  producto        Producto      @relation(fields: [productoId], references: [id])
+
+  @@map("detalle_transferencia")
+}
+
+model FormaFarmaceutica {
+  id            Int        @id @default(autoincrement())
+  nombre        String     @unique
+  estado        String     @default("activo")
+  fechaCreacion DateTime   @default(now()) @map("fecha_creacion")
+  productos     Producto[]
+
+  @@map("forma_farmaceutica")
+}
+
+model Compuesto {
+  id            Int                 @id @default(autoincrement())
+  nombre        String              @unique
+  fechaCreacion DateTime            @default(now()) @map("fecha_creacion")
+  productos     ProductoCompuesto[]
+
+  @@map("compuesto")
+}
+
+model ProductoCompuesto {
+  productoId    Int               @map("producto_id")
+  compuestoId   Int               @map("compuesto_id")
+  concentracion String?
+  producto      Producto          @relation(fields: [productoId], references: [id], onDelete: Cascade)
+  compuesto     Compuesto         @relation(fields: [compuestoId], references: [id], onDelete: Cascade)
+
+  @@id([productoId, compuestoId])
+  @@map("producto_compuesto")
+}
+
+model UnidadMedida {
+  id            Int      @id @default(autoincrement())
+  nombre        String   @unique
+  fechaCreacion DateTime @default(now()) @map("fecha_creacion")
+
+  @@map("unidad_medida")
 }

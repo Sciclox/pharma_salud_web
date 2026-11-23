@@ -1,36 +1,40 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+﻿# 💊 PharmaSalud Web - Pharmacy Operations & Patient Management Portal
 
-## Getting Started
+> Modern healthcare and pharmaceutical web application built with Next.js, React, TypeScript, and Tailwind CSS.
 
-First, run the development server:
+[![Next.js](https://img.shields.io/badge/Next.js-15-black?style=flat&logo=next.js&logoColor=white)](https://nextjs.org/)
+[![Tailwind CSS](https://img.shields.io/badge/TailwindCSS-06B6D4?style=flat&logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178C6?style=flat&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![License](https://img.shields.io/badge/License-MIT-purple.svg)](LICENSE)
 
-```bash
+---
+
+## 🌟 Overview
+
+**PharmaSalud Web** is the digital interface connecting pharmacies, healthcare providers, and patients. It streamlines prescription validation, medication inventory lookup, insurance coverage calculations, and real-time order dispatch.
+
+---
+
+## ✨ Features
+
+- **Prescription Order Flow**: Upload digital prescriptions and verify medical registry numbers.
+- **Live Inventory Search**: Real-time batch expiration alerts, generic alternative lookups, and active stock indicators.
+- **Healthcare Compliance**: Patient data encryption and role-gated access to medical history.
+- **Responsive Dashboard**: Optimized for pharmacist POS terminals, desktop workstations, and mobile devices.
+
+---
+
+## 🚀 Getting Started
+
+`ash
+git clone https://github.com/Sciclox/pharma_salud_web.git
+cd pharma_salud_web
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+`
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 👤 Author
+**Kevin Palacios Pozo** - Software Engineer  
+- GitHub: [@Sciclox](https://github.com/Sciclox)

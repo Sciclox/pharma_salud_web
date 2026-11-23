@@ -66,34 +66,13 @@ export async function PUT(
       );
     }
 
-    const nombreAnterior = categoriaExistente.nombre;
-
-    // Actualizar categoría y opcionalmente los productos asociados en una transacción
-    const categoriaActualizada = await prisma.$transaction(async (tx) => {
-      const actualizada = await tx.categoria.update({
-        where: { id: categoriaId },
-        data: {
-          nombre: nombreNormalizado,
-          descripcion: descripcion?.trim() || null,
-          estado: estado ?? undefined,
-        },
-      });
-
-      if (nombreAnterior.toLowerCase() !== nombreNormalizado.toLowerCase()) {
-        await tx.producto.updateMany({
-          where: {
-            tipoProducto: {
-              equals: nombreAnterior,
-              mode: "insensitive",
-            },
-          },
-          data: {
-            tipoProducto: nombreNormalizado,
-          },
-        });
-      }
-
-      return actualizada;
+    const categoriaActualizada = await prisma.categoria.update({
+      where: { id: categoriaId },
+      data: {
+        nombre: nombreNormalizado,
+        descripcion: descripcion?.trim() || null,
+        estado: estado ?? undefined,
+      },
     });
 
     return NextResponse.json(categoriaActualizada);
@@ -138,14 +117,8 @@ export async function DELETE(
       );
     }
 
-    // Verificar si existen productos asociados a esta categoría
     const productosAsociados = await prisma.producto.count({
-      where: {
-        tipoProducto: {
-          equals: categoria.nombre,
-          mode: "insensitive",
-        },
-      },
+      where: { categorias: { some: { id: categoriaId } } },
     });
 
     if (productosAsociados > 0) {

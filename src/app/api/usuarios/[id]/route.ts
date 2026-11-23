@@ -163,6 +163,26 @@ export async function DELETE(
       );
     }
 
+    // Verificar datos relacionados antes de eliminar
+    const relations = [
+      { table: "ventas", count: await prisma.registroVentas.count({ where: { usuarioId } }) },
+      { table: "órdenes de compra", count: await prisma.ordenCompra.count({ where: { usuarioId } }) },
+      { table: "ingresos de mercadería", count: await prisma.ingresoMercaderia.count({ where: { usuarioId } }) },
+      { table: "sobrantes de caja", count: await prisma.sobranteCaja.count({ where: { usuarioId } }) },
+      { table: "transferencias", count: await prisma.transferencia.count({ where: { usuarioId } }) },
+      { table: "carrito de ventas", count: await prisma.carritoVentas.count({ where: { idUsuario: usuarioId } }) },
+    ];
+
+    const conDatos = relations.filter(r => r.count > 0);
+
+    if (conDatos.length > 0) {
+      const detalle = conDatos.map(r => `${r.count} ${r.table}`).join(", ");
+      return NextResponse.json({
+        error: `No se puede eliminar el usuario porque tiene datos relacionados: ${detalle}. Desactívelo o elimine esos registros primero.`,
+        relaciones: conDatos,
+      }, { status: 409 });
+    }
+
     await prisma.usuario.delete({
       where: { id: usuarioId },
     });

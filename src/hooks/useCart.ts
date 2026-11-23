@@ -11,7 +11,15 @@ export interface CartItem {
   fecha: string;
   producto: {
     nombreProducto: string;
-    tipoProducto: string | null;
+    nombreComercial?: string | null;
+    nombreGenerico?: string | null;
+    concentracion?: string | null;
+    formaFarmaceuticaRel?: { nombre: string } | null;
+    presentacion?: string | null;
+    laboratorio?: { nombre: string } | null;
+    sku?: string | null;
+    codigoBarras?: string | null;
+    categorias?: { nombre: string }[];
     cantidadPresentacion: number | null;
     cantidadPresentacionBlister: number | null;
   };
@@ -23,8 +31,8 @@ export function useCart() {
   const [error, setError] = useState<string | null>(null);
 
   // Obtener items del carrito de la base de datos
-  const fetchCart = useCallback(async () => {
-    setLoading(true);
+  const fetchCart = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     setError(null);
     try {
       const res = await fetch("/api/carrito");
@@ -37,7 +45,7 @@ export function useCart() {
       setError(err.message || "Error de red");
       console.error(err);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, []);
 
@@ -53,7 +61,6 @@ export function useCart() {
     precioVenta: number,
     tipoVenta: string
   ) => {
-    setLoading(true);
     setError(null);
     try {
       const res = await fetch("/api/carrito", {
@@ -64,25 +71,47 @@ export function useCart() {
 
       if (!res.ok) {
         const errData = await res.json();
-        throw new Error(errData.error || "Error al agregar al carrito");
+        const errMsg = errData.error || "Error al agregar al carrito";
+        setError(errMsg);
+        return { success: false, error: errMsg };
       }
 
-      // Volver a cargar el carrito para asegurar sincronía
-      await fetchCart();
-      return true;
+      // Insertar/actualizar en estado local directamente con el item devuelto
+      const newItem = await res.json();
+
+      if (newItem.id) {
+        setItems(prev => {
+          const idx = prev.findIndex(i => i.id === newItem.id);
+          if (idx >= 0) {
+            const updated = [...prev];
+            updated[idx] = newItem;
+            return updated;
+          }
+          return [...prev, newItem];
+        });
+      } else {
+        // Caso "Item eliminado del carrito" (nuevaCantidad <= 0)
+        await fetchCart(true);
+      }
+
+      return { success: true };
     } catch (err: any) {
-      setError(err.message || "Error al procesar adición");
+      const errMsg = err.message || "Error al procesar adición";
+      setError(errMsg);
       console.error(err);
-      return false;
-    } finally {
-      setLoading(false);
+      return { success: false, error: errMsg };
     }
   };
 
   // Actualizar cantidad de un item
   const updateQuantity = async (itemId: number, nuevaCantidad: number) => {
-    setLoading(true);
+    const previousItems = items;
+    // Actualización optimista instantánea en memoria
+    setItems(prevItems => prevItems.map(item => 
+      item.id === itemId ? { ...item, cantidad: nuevaCantidad } : item
+    ));
     setError(null);
+
     try {
       const res = await fetch(`/api/carrito/${itemId}`, {
         method: "PUT",
@@ -92,24 +121,29 @@ export function useCart() {
 
       if (!res.ok) {
         const errData = await res.json();
-        throw new Error(errData.error || "Error al actualizar cantidad");
+        setError(errData.error || "Error al actualizar cantidad");
+        // Revertir estado si falla
+        setItems(previousItems);
+        return false;
       }
 
-      await fetchCart();
       return true;
     } catch (err: any) {
       setError(err.message || "Error al actualizar cantidad");
       console.error(err);
+      // Revertir estado si falla
+      setItems(previousItems);
       return false;
-    } finally {
-      setLoading(false);
     }
   };
 
   // Eliminar un item individual
   const removeItem = async (itemId: number) => {
-    setLoading(true);
+    const previousItems = items;
+    // Actualización optimista instantánea en memoria
+    setItems(prevItems => prevItems.filter(item => item.id !== itemId));
     setError(null);
+
     try {
       const res = await fetch(`/api/carrito/${itemId}`, {
         method: "DELETE",
@@ -117,53 +151,60 @@ export function useCart() {
 
       if (!res.ok) {
         const errData = await res.json();
-        throw new Error(errData.error || "Error al eliminar item");
+        setError(errData.error || "Error al eliminar item");
+        // Revertir estado si falla
+        setItems(previousItems);
+        return false;
       }
 
-      await fetchCart();
       return true;
     } catch (err: any) {
       setError(err.message || "Error al eliminar item");
       console.error(err);
+      // Revertir estado si falla
+      setItems(previousItems);
       return false;
-    } finally {
-      setLoading(false);
     }
   };
 
   // Vaciar el carrito
   const clearCart = async () => {
-    setLoading(true);
+    const previousItems = items;
+    // Actualización optimista instantánea en memoria
+    setItems([]);
     setError(null);
+
     try {
       const res = await fetch("/api/carrito", {
         method: "DELETE",
       });
 
       if (!res.ok) {
-        throw new Error("Error al vaciar el carrito");
+        setError("Error al vaciar el carrito");
+        // Revertir estado si falla
+        setItems(previousItems);
+        return false;
       }
 
-      setItems([]);
       return true;
     } catch (err: any) {
       setError(err.message || "Error al vaciar");
       console.error(err);
+      // Revertir estado si falla
+      setItems(previousItems);
       return false;
-    } finally {
-      setLoading(false);
     }
   };
 
   // Finalizar compra (cobrar)
-  const checkout = async (pagoCon: number, vuelto: number) => {
+  const checkout = async (pagoCon: number, vuelto: number, metodoPago?: string, referenciaPago?: string) => {
     setLoading(true);
     setError(null);
     try {
       const res = await fetch("/api/carrito/cobrar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pagoCon, vuelto }),
+        body: JSON.stringify({ pagoCon, vuelto, metodoPago, referenciaPago }),
       });
 
       const data = await res.json();

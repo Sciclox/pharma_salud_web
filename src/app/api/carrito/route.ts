@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
+import { getFullProductName } from "@/lib/productos";
 
 // GET /api/carrito - Obtener items del carrito para el usuario logueado
 export async function GET() {
@@ -20,17 +21,32 @@ export async function GET() {
       include: {
         producto: {
           select: {
-            nombreProducto: true,
-            categoriaId: true,
+            nombreComercial: true,
+            nombreGenerico: true,
+            concentracion: true,
+            presentacion: true,
+            sku: true,
+            codigoBarras: true,
             cantidadPresentacion: true,
             cantidadPresentacionBlister: true,
+            categorias: { select: { nombre: true } },
+            formaFarmaceuticaRel: { select: { nombre: true } },
+            laboratorio: { select: { nombre: true } },
           },
         },
       },
       orderBy: { fecha: "asc" },
     });
 
-    return NextResponse.json(items);
+    const mappedItems = items.map(item => ({
+      ...item,
+      producto: {
+        ...item.producto,
+        nombreProducto: getFullProductName(item.producto)
+      }
+    }));
+
+    return NextResponse.json(mappedItems);
   } catch (error) {
     console.error("Error al obtener carrito:", error);
     return NextResponse.json(
@@ -88,13 +104,91 @@ export async function POST(request: Request) {
       },
     });
 
+    // ── VALIDACIÓN DE STOCK EN TIEMPO REAL ───────────────────────────────────
+    const inventario = await prisma.inventarioSucursal.findUnique({
+      where: {
+        productoId_sucursalId: {
+          productoId: pId,
+          sucursalId,
+        },
+      },
+    });
+
+    if (!inventario) {
+      return NextResponse.json(
+        { error: "Este producto no cuenta con inventario registrado en esta sucursal." },
+        { status: 400 }
+      );
+    }
+
+    let factorNuevo = 1;
+    if (tipoVenta === "Venta por caja") {
+      factorNuevo = producto.cantidadPresentacion || 1;
+    } else if (tipoVenta === "Venta por blíster") {
+      factorNuevo = producto.cantidadPresentacionBlister || 1;
+    }
+    const unidadesNuevas = cant * factorNuevo;
+
+    const otrosItemsCarrito = await prisma.carritoVentas.findMany({
+      where: {
+        idUsuario,
+        sucursalId,
+        productoId: pId,
+        NOT: itemExistente ? { id: itemExistente.id } : undefined,
+      },
+    });
+
+    const unidadesEnCarritoOtros = otrosItemsCarrito.reduce((acc, item) => {
+      let f = 1;
+      if (item.tipoVenta === "Venta por caja") {
+        f = producto.cantidadPresentacion || 1;
+      } else if (item.tipoVenta === "Venta por blíster") {
+        f = producto.cantidadPresentacionBlister || 1;
+      }
+      return acc + item.cantidad * f;
+    }, 0);
+
+    const totalUnidadesRequeridas = unidadesEnCarritoOtros + (itemExistente ? (itemExistente.cantidad + cant) : cant) * factorNuevo;
+
+    if (totalUnidadesRequeridas > inventario.cantidadTotal) {
+      const disponibles = Math.max(0, inventario.cantidadTotal - unidadesEnCarritoOtros);
+      let maximoFormateado = `${disponibles} unidades`;
+      if (tipoVenta === "Venta por caja") {
+        maximoFormateado = `${Math.floor(disponibles / factorNuevo)} cajas`;
+      } else if (tipoVenta === "Venta por blíster") {
+        maximoFormateado = `${Math.floor(disponibles / factorNuevo)} blísteres`;
+      }
+      return NextResponse.json(
+        { error: `Stock insuficiente. Solo quedan ${maximoFormateado} disponibles en este formato.` },
+        { status: 400 }
+      );
+    }
+
+    const itemInclude = {
+      producto: {
+        select: {
+          nombreComercial: true,
+          nombreGenerico: true,
+          concentracion: true,
+          presentacion: true,
+          sku: true,
+          codigoBarras: true,
+          cantidadPresentacion: true,
+          cantidadPresentacionBlister: true,
+          categorias: { select: { nombre: true } },
+          formaFarmaceuticaRel: { select: { nombre: true } },
+          laboratorio: { select: { nombre: true } },
+        },
+      },
+    } as const;
+
     if (itemExistente) {
       // Incrementar la cantidad del item existente
       const nuevaCantidad = itemExistente.cantidad + cant;
 
       if (nuevaCantidad <= 0) {
-        // Si el cliente reduce la cantidad a 0 o menos, borrar el item
-        await prisma.carritoVentas.delete({
+        // Usar deleteMany para evitar error si ya fue eliminado
+        await prisma.carritoVentas.deleteMany({
           where: { id: itemExistente.id },
         });
         return NextResponse.json({ message: "Item eliminado del carrito" });
@@ -106,9 +200,16 @@ export async function POST(request: Request) {
           cantidad: nuevaCantidad,
           precioVenta: precio, // Por si cambió el precio
         },
+        include: itemInclude,
       });
 
-      return NextResponse.json(itemActualizado);
+      return NextResponse.json({
+        ...itemActualizado,
+        producto: {
+          ...itemActualizado.producto,
+          nombreProducto: getFullProductName(itemActualizado.producto as any),
+        },
+      });
     } else {
       // Crear un nuevo registro en el carrito
       if (cant <= 0) {
@@ -127,9 +228,16 @@ export async function POST(request: Request) {
           precioVenta: precio,
           tipoVenta,
         },
+        include: itemInclude,
       });
 
-      return NextResponse.json(nuevoItem, { status: 201 });
+      return NextResponse.json({
+        ...nuevoItem,
+        producto: {
+          ...nuevoItem.producto,
+          nombreProducto: getFullProductName(nuevoItem.producto as any),
+        },
+      }, { status: 201 });
     }
   } catch (error) {
     console.error("Error al agregar al carrito:", error);
